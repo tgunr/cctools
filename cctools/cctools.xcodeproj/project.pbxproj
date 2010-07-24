@@ -263,6 +263,7 @@
 		75611D0A11F8D879007A0C78 /* writeout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561196111F8C82E007A0C78 /* writeout.c */; };
 		75611D0B11F8D879007A0C78 /* bytesex.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194011F8C82E007A0C78 /* bytesex.c */; };
 		75611D0C11F8D879007A0C78 /* set_arch_flag_name.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561195A11F8C82E007A0C78 /* set_arch_flag_name.c */; };
+		75611FFD11FA400C007A0C78 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 75611FFC11FA400C007A0C78 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -293,7 +294,7 @@
 		7561180911F8C82E007A0C78 /* atof-ieee.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "atof-ieee.c"; sourceTree = "<group>"; };
 		7561180A11F8C82E007A0C78 /* atof-ieee.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "atof-ieee.h"; sourceTree = "<group>"; };
 		7561180B11F8C82E007A0C78 /* bignum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bignum.h; sourceTree = "<group>"; };
-		7561180C11F8C82E007A0C78 /* cctools.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = cctools.plist; sourceTree = "<group>"; };
+		7561180C11F8C82E007A0C78 /* cctools.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = cctools.plist; path = "../../cctools-750/as/cctools.plist"; sourceTree = "<group>"; };
 		7561180D11F8C82E007A0C78 /* COPYING */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = COPYING; sourceTree = "<group>"; };
 		7561180E11F8C82E007A0C78 /* driver.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = driver.c; sourceTree = "<group>"; };
 		7561180F11F8C82E007A0C78 /* dwarf2dbg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dwarf2dbg.c; sourceTree = "<group>"; };
@@ -603,7 +604,7 @@
 		7561196511F8C82E007A0C78 /* cmpdylib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cmpdylib.c; sourceTree = "<group>"; };
 		7561196611F8C82E007A0C78 /* codesign_allocate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = codesign_allocate.c; sourceTree = "<group>"; };
 		7561196711F8C82E007A0C78 /* indr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = indr.c; sourceTree = "<group>"; };
-		7561196811F8C82E007A0C78 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7561196811F8C82E007A0C78 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "../../cctools-750/misc/Info.plist"; sourceTree = "<group>"; };
 		7561196911F8C82E007A0C78 /* inout.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = inout.c; sourceTree = "<group>"; };
 		7561196A11F8C82E007A0C78 /* install_name_tool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = install_name_tool.c; sourceTree = "<group>"; };
 		7561196B11F8C82E007A0C78 /* libtool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = libtool.c; sourceTree = "<group>"; };
@@ -648,7 +649,8 @@
 		7561199311F8C82E007A0C78 /* sparc_disasm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sparc_disasm.c; sourceTree = "<group>"; };
 		7561199411F8C82E007A0C78 /* sparc_disasm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sparc_disasm.h; sourceTree = "<group>"; };
 		75611C8511F8D826007A0C78 /* CCTools Framework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "CCTools Framework.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
-		75611C8611F8D826007A0C78 /* CCTools Framework-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CCTools Framework-Info.plist"; path = "../../cctools-750/cctools/CCTools Framework-Info.plist"; sourceTree = "<group>"; };
+		75611C8611F8D826007A0C78 /* CCTools-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CCTools-Info.plist"; path = "../../cctools-750/cctools/CCTools-Info.plist"; sourceTree = "<group>"; };
+		75611FFC11FA400C007A0C78 /* InfoPlist.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; path = InfoPlist.strings; sourceTree = "<group>"; };
 		D2AAC0630554660B00DB518D /* libcctools.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libcctools.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -675,7 +677,7 @@
 			children = (
 				08FB7795FE84155DC02AAC07 /* Source */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
-				75611C8611F8D826007A0C78 /* CCTools Framework-Info.plist */,
+				75611E7F11FA3B27007A0C78 /* Resources */,
 			);
 			name = cctools;
 			sourceTree = "<group>";
@@ -1416,6 +1418,15 @@
 			path = ../otool;
 			sourceTree = SOURCE_ROOT;
 		};
+		75611E7F11FA3B27007A0C78 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				75611C8611F8D826007A0C78 /* CCTools-Info.plist */,
+				75611FFC11FA400C007A0C78 /* InfoPlist.strings */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1620,9 +1631,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		75611C8411F8D826007A0C78 /* CCTools Framework */ = {
+		75611C8411F8D826007A0C78 /* CCTools */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 75611C8C11F8D827007A0C78 /* Build configuration list for PBXNativeTarget "CCTools Framework" */;
+			buildConfigurationList = 75611C8C11F8D827007A0C78 /* Build configuration list for PBXNativeTarget "CCTools" */;
 			buildPhases = (
 				75611C8011F8D826007A0C78 /* Headers */,
 				75611C8111F8D826007A0C78 /* Resources */,
@@ -1633,7 +1644,7 @@
 			);
 			dependencies = (
 			);
-			name = "CCTools Framework";
+			name = CCTools;
 			productName = "CCTools Framework";
 			productReference = 75611C8511F8D826007A0C78 /* CCTools Framework.framework */;
 			productType = "com.apple.product-type.framework";
@@ -1668,7 +1679,7 @@
 			projectRoot = "";
 			targets = (
 				D2AAC0620554660B00DB518D /* cctools */,
-				75611C8411F8D826007A0C78 /* CCTools Framework */,
+				75611C8411F8D826007A0C78 /* CCTools */,
 			);
 		};
 /* End PBXProject section */
@@ -1678,6 +1689,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				75611FFD11FA400C007A0C78 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1803,15 +1815,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = ".git *.nib *.lproj *.framework *.gch *.xcode* (*) CVS .svn";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../cctools-750/include\"";
+				HEADER_SEARCH_PATHS = "~/Sources/Darwin/cctools/include";
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = macosx10.6;
-				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
 		};
@@ -1819,14 +1831,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = ".git *.nib *.lproj *.framework *.gch *.xcode* (*) CVS .svn";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../cctools-750/include\"";
+				HEADER_SEARCH_PATHS = "~/Sources/Darwin/cctools/include";
 				PREBINDING = NO;
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				SDKROOT = macosx10.6;
-				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
 		};
@@ -1843,11 +1855,11 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
-				INFOPLIST_FILE = "CCTools Framework-Info.plist";
+				INFOPLIST_FILE = "/Volumes/leopard/Sources/Darwin/cctools-750/cctools/CCTools-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
-				PRODUCT_NAME = "CCTools Framework";
+				PRODUCT_NAME = CCTools;
 			};
 			name = Debug;
 		};
@@ -1864,7 +1876,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = NO;
 				GCC_PREFIX_HEADER = "";
-				INFOPLIST_FILE = "CCTools Framework-Info.plist";
+				INFOPLIST_FILE = "/Volumes/leopard/Sources/Darwin/cctools-750/cctools/CCTools-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
@@ -1894,7 +1906,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		75611C8C11F8D827007A0C78 /* Build configuration list for PBXNativeTarget "CCTools Framework" */ = {
+		75611C8C11F8D827007A0C78 /* Build configuration list for PBXNativeTarget "CCTools" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				75611C8711F8D827007A0C78 /* Debug */,
