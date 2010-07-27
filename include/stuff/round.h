@@ -34,6 +34,8 @@
 /*
  * round() rounds v to a multiple of r.
  */
-__private_extern__ uint32_t round(
+__private_extern__ uint32_t roundtor(
     uint32_t v,
     uint32_t r);
+
+
