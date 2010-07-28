@@ -4,20 +4,19 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>CCTools.xcscheme</key>
-		<dict>
-			<key>orderHint</key>
-			<integer>4</integer>
-		</dict>
 		<key>cctools.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>3</integer>
+			<integer>2</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
 		<key>CCTools Framework.framework</key>
+		<true/>
+		<key>CCTools.framework</key>
+		<true/>
+		<key>CCToolsMini.framework</key>
 		<true/>
 		<key>libcctools.dylib</key>
 		<true/>

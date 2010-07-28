@@ -6,6 +6,9 @@
          <BuildableProductReference
             BuildableProductIdentifier = "CCTools Framework.framework">
          </BuildableProductReference>
+         <BuildableProductReference
+            BuildableProductIdentifier = "libcctools.dylib">
+         </BuildableProductReference>
       </BuildableProductReferences>
    </BuildAction>
    <TestAction>
