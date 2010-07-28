@@ -32,7 +32,7 @@
  */
 __private_extern__
 uint32_t
-roundtor(
+round(
 uint32_t v,
 uint32_t r)
 {

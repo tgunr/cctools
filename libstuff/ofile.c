@@ -1892,7 +1892,7 @@ struct ofile *ofile)
 	}
 
 	/* figure out the offset to the next member */
-	offset = ofile->member_offset + roundtor(ofile->member_size,sizeof(short));
+	offset = ofile->member_offset + round(ofile->member_size,sizeof(short));
 #ifdef OTOOL
 	if((addr - ofile->file_addr) + offset > ofile->file_size){
 	    archive_error(ofile, "offset to next member extends past the end "
@@ -2276,7 +2276,7 @@ struct ofile *ofile)
 #endif /* LTO_SUPPORT */
 		return(TRUE);
 	    }
-	    offset += roundtor(strtoul(ar_hdr->ar_size, NULL, 10),
+	    offset += round(strtoul(ar_hdr->ar_size, NULL, 10),
 			    sizeof(short));
 	}
 	archive_error(ofile, "does not contain a member named: %s",
@@ -3013,7 +3013,7 @@ enum bool archives_with_fat_objects)
 		    }
 		}
 	    }
-	    offset += roundtor(ofile->member_size, sizeof(short));
+	    offset += round(ofile->member_size, sizeof(short));
 	}
 	ofile->member_offset = 0;
 	ofile->member_addr = NULL;
