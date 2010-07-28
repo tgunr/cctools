@@ -184,7 +184,7 @@ char *fileName)
 	    my_mach_error(r, "Can't vm_deallocate mapped memory for file: "
 		   "%s",fileName);
 	}
-	free(gInfo->fileName);
+//	free(gInfo->fileName);
 	free(gInfo->cachedFileName);
 	return(rList);
 }
