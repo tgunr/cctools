@@ -29,7 +29,6 @@
 		75611AAB11F8C82E007A0C78 /* arch_usage.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193D11F8C82E007A0C78 /* arch_usage.c */; };
 		75611AAC11F8C82E007A0C78 /* best_arch.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193E11F8C82E007A0C78 /* best_arch.c */; };
 		75611AAD11F8C82E007A0C78 /* breakout.c in Headers */ = {isa = PBXBuildFile; fileRef = 7561193F11F8C82E007A0C78 /* breakout.c */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611AAF11F8C82E007A0C78 /* checkout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194111F8C82E007A0C78 /* checkout.c */; };
 		75611AB011F8C82E007A0C78 /* coff_bytesex.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194211F8C82E007A0C78 /* coff_bytesex.c */; };
 		75611AB111F8C82E007A0C78 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194311F8C82E007A0C78 /* crc32.c */; };
 		75611AB411F8C82E007A0C78 /* errors.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194611F8C82E007A0C78 /* errors.c */; };
@@ -59,14 +58,12 @@
 		75611C8D11F8D85C007A0C78 /* fpu.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561186F11F8C82E007A0C78 /* fpu.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C8E11F8D85C007A0C78 /* frame.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187011F8C82E007A0C78 /* frame.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C8F11F8D85C007A0C78 /* fp_regs.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187211F8C82E007A0C78 /* fp_regs.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611C9011F8D85C007A0C78 /* reg_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187311F8C82E007A0C78 /* reg_help.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9111F8D85C007A0C78 /* macro_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187511F8C82E007A0C78 /* macro_help.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9211F8D85C007A0C78 /* reg_help.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187611F8C82E007A0C78 /* reg_help.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9311F8D85C007A0C78 /* reg.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187811F8C82E007A0C78 /* reg.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9411F8D85C007A0C78 /* libsyminfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187A11F8C82E007A0C78 /* libsyminfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9511F8D85C007A0C78 /* aouthdr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187C11F8C82E007A0C78 /* aouthdr.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9611F8D85C007A0C78 /* base_relocs.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187D11F8C82E007A0C78 /* base_relocs.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611C9711F8D85C007A0C78 /* bytesex.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187E11F8C82E007A0C78 /* bytesex.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9811F8D85C007A0C78 /* debug_directory.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561187F11F8C82E007A0C78 /* debug_directory.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9911F8D85C007A0C78 /* filehdr.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188011F8C82E007A0C78 /* filehdr.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9A11F8D85C007A0C78 /* ms_dos_stub.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188111F8C82E007A0C78 /* ms_dos_stub.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -76,15 +73,9 @@
 		75611C9E11F8D85C007A0C78 /* a.out.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188711F8C82E007A0C78 /* a.out.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611C9F11F8D85C007A0C78 /* exec.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188811F8C82E007A0C78 /* exec.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CA011F8D85C007A0C78 /* symseg.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188911F8C82E007A0C78 /* symseg.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA111F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188C11F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CA211F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561188E11F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA311F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189011F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA411F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189211F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA511F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189411F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CA611F8D85C007A0C78 /* machine.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189511F8C82E007A0C78 /* machine.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA711F8D85C007A0C78 /* thread_status.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189711F8C82E007A0C78 /* thread_status.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CA811F8D85C007A0C78 /* arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189911F8C82E007A0C78 /* arch.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CA911F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189B11F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CAA11F8D85C007A0C78 /* dyld.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189C11F8C82E007A0C78 /* dyld.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CAB11F8D85C007A0C78 /* dyld_debug.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189D11F8C82E007A0C78 /* dyld_debug.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CAC11F8D85C007A0C78 /* dyld_gdb.h in Headers */ = {isa = PBXBuildFile; fileRef = 7561189E11F8C82E007A0C78 /* dyld_gdb.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -92,35 +83,21 @@
 		75611CAE11F8D85C007A0C78 /* fat.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A011F8C82E007A0C78 /* fat.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CAF11F8D85C007A0C78 /* getsect.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A111F8C82E007A0C78 /* getsect.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CB011F8D85C007A0C78 /* gmon.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A211F8C82E007A0C78 /* gmon.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB111F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A411F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB211F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A511F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB311F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A711F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB411F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118A911F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB511F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118AA11F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CB611F8D85C007A0C78 /* kld.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118AB11F8C82E007A0C78 /* kld.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CB711F8D85C007A0C78 /* ldsyms.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118AC11F8C82E007A0C78 /* ldsyms.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CB811F8D85C007A0C78 /* loader.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118AD11F8C82E007A0C78 /* loader.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CB911F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118AF11F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CBA11F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B111F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CBB11F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B211F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CBC11F8D85C007A0C78 /* nlist.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B311F8C82E007A0C78 /* nlist.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CBD11F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B511F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CBE11F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B611F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CBF11F8D85C007A0C78 /* ranlib.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B711F8C82E007A0C78 /* ranlib.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC011F8D85C007A0C78 /* redo_prebinding.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B811F8C82E007A0C78 /* redo_prebinding.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CC111F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118B911F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC211F8D85C007A0C78 /* rld.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118BA11F8C82E007A0C78 /* rld.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC311F8D85C007A0C78 /* rld_state.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118BB11F8C82E007A0C78 /* rld_state.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC411F8D85C007A0C78 /* sarld.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118BC11F8C82E007A0C78 /* sarld.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CC511F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118BE11F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC611F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118BF11F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CC711F8D85C007A0C78 /* stab.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118C011F8C82E007A0C78 /* stab.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CC811F8D85C007A0C78 /* swap.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118C111F8C82E007A0C78 /* swap.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CC911F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118C311F8C82E007A0C78 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CCA11F8D85C007A0C78 /* arm.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118C711F8C82E007A0C78 /* arm.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CCB11F8D85C007A0C78 /* libsa.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118C911F8C82E007A0C78 /* libsa.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CCC11F8D85C007A0C78 /* allocate.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118CB11F8C82E007A0C78 /* allocate.h */; };
-		75611CCD11F8D85C007A0C78 /* arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118CC11F8C82E007A0C78 /* arch.h */; };
 		75611CCE11F8D85C007A0C78 /* best_arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118CD11F8C82E007A0C78 /* best_arch.h */; };
 		75611CCF11F8D85C007A0C78 /* bool.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118CE11F8C82E007A0C78 /* bool.h */; };
 		75611CD011F8D85C007A0C78 /* breakout.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118CF11F8C82E007A0C78 /* breakout.h */; };
@@ -138,7 +115,6 @@
 		75611CDC11F8D85C007A0C78 /* ofile.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118DB11F8C82E007A0C78 /* ofile.h */; };
 		75611CDD11F8D85C007A0C78 /* openstep_mach.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118DC11F8C82E007A0C78 /* openstep_mach.h */; };
 		75611CDE11F8D85C007A0C78 /* print.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118DD11F8C82E007A0C78 /* print.h */; };
-		75611CDF11F8D85C007A0C78 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118DE11F8C82E007A0C78 /* reloc.h */; };
 		75611CE011F8D85C007A0C78 /* round.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118DF11F8C82E007A0C78 /* round.h */; };
 		75611CE111F8D85C007A0C78 /* seg_addr_table.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E011F8C82E007A0C78 /* seg_addr_table.h */; };
 		75611CE211F8D85C007A0C78 /* symbol.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E111F8C82E007A0C78 /* symbol.h */; };
@@ -147,14 +123,12 @@
 		75611CE511F8D85C007A0C78 /* unix_standard_mode.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E411F8C82E007A0C78 /* unix_standard_mode.h */; };
 		75611CE611F8D85C007A0C78 /* version_number.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E511F8C82E007A0C78 /* version_number.h */; };
 		75611CE711F8D85C007A0C78 /* vm_flush_cache.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E611F8C82E007A0C78 /* vm_flush_cache.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		75611CE811F8D85C007A0C78 /* gmon.h in Headers */ = {isa = PBXBuildFile; fileRef = 756118E811F8C82E007A0C78 /* gmon.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75611CE911F8D879007A0C78 /* libsyminfo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561185211F8C82E007A0C78 /* libsyminfo.c */; };
 		75611CEA11F8D879007A0C78 /* allocate.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193B11F8C82E007A0C78 /* allocate.c */; };
 		75611CEB11F8D879007A0C78 /* arch.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193C11F8C82E007A0C78 /* arch.c */; };
 		75611CEC11F8D879007A0C78 /* arch_usage.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193D11F8C82E007A0C78 /* arch_usage.c */; };
 		75611CED11F8D879007A0C78 /* best_arch.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193E11F8C82E007A0C78 /* best_arch.c */; };
 		75611CEE11F8D879007A0C78 /* breakout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193F11F8C82E007A0C78 /* breakout.c */; };
-		75611CEF11F8D879007A0C78 /* checkout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194111F8C82E007A0C78 /* checkout.c */; };
 		75611CF011F8D879007A0C78 /* coff_bytesex.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194211F8C82E007A0C78 /* coff_bytesex.c */; };
 		75611CF111F8D879007A0C78 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194311F8C82E007A0C78 /* crc32.c */; };
 		75611CF211F8D879007A0C78 /* dylib_roots.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194411F8C82E007A0C78 /* dylib_roots.c */; };
@@ -186,7 +160,6 @@
 		75611D0C11F8D879007A0C78 /* set_arch_flag_name.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561195A11F8C82E007A0C78 /* set_arch_flag_name.c */; };
 		75611FFD11FA400C007A0C78 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 75611FFC11FA400C007A0C78 /* InfoPlist.strings */; };
 		7566F69111FF671E001FF517 /* allocate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67511FF671E001FF517 /* allocate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		7566F69211FF671E001FF517 /* arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67611FF671E001FF517 /* arch.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F69311FF671E001FF517 /* best_arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67711FF671E001FF517 /* best_arch.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F69411FF671E001FF517 /* bool.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67811FF671E001FF517 /* bool.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F69511FF671E001FF517 /* breakout.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67911FF671E001FF517 /* breakout.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -204,7 +177,6 @@
 		7566F6A111FF671E001FF517 /* ofile.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68511FF671E001FF517 /* ofile.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6A211FF671E001FF517 /* openstep_mach.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68611FF671E001FF517 /* openstep_mach.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6A311FF671E001FF517 /* print.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68711FF671E001FF517 /* print.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		7566F6A411FF671E001FF517 /* reloc.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68811FF671E001FF517 /* reloc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6A511FF671E001FF517 /* round.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68911FF671E001FF517 /* round.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6A611FF671E001FF517 /* seg_addr_table.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68A11FF671E001FF517 /* seg_addr_table.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6A711FF671E001FF517 /* symbol_list.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68B11FF671E001FF517 /* symbol_list.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -212,7 +184,6 @@
 		7566F6A911FF671E001FF517 /* SymLoc.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68D11FF671E001FF517 /* SymLoc.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6AA11FF671E001FF517 /* unix_standard_mode.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68E11FF671E001FF517 /* unix_standard_mode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6AB11FF671E001FF517 /* version_number.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F68F11FF671E001FF517 /* version_number.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		7566F6AC11FF671E001FF517 /* vm_flush_cache.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F69011FF671E001FF517 /* vm_flush_cache.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6C911FF671E001FF517 /* allocate.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67511FF671E001FF517 /* allocate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6CA11FF671E001FF517 /* arch.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67611FF671E001FF517 /* arch.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		7566F6CC11FF671E001FF517 /* bool.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67811FF671E001FF517 /* bool.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -230,7 +201,6 @@
 		75AF21DD12008E8C003F2B8F /* crc32.h in Headers */ = {isa = PBXBuildFile; fileRef = 7566F67B11FF671E001FF517 /* crc32.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		75AF21E812008F28003F2B8F /* aouthdr.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E012008F28003F2B8F /* aouthdr.h */; };
 		75AF21E912008F28003F2B8F /* base_relocs.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E112008F28003F2B8F /* base_relocs.h */; };
-		75AF21EA12008F28003F2B8F /* bytesex.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E212008F28003F2B8F /* bytesex.h */; };
 		75AF21EB12008F28003F2B8F /* debug_directory.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E312008F28003F2B8F /* debug_directory.h */; };
 		75AF21EC12008F28003F2B8F /* filehdr.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E412008F28003F2B8F /* filehdr.h */; };
 		75AF21ED12008F28003F2B8F /* ms_dos_stub.h in Headers */ = {isa = PBXBuildFile; fileRef = 75AF21E512008F28003F2B8F /* ms_dos_stub.h */; };
@@ -290,7 +260,6 @@
 		75AF22C31200965A003F2B8F /* arch_usage.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193D11F8C82E007A0C78 /* arch_usage.c */; };
 		75AF22C41200965A003F2B8F /* best_arch.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561193E11F8C82E007A0C78 /* best_arch.c */; };
 		75AF22C51200965A003F2B8F /* bytesex.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194011F8C82E007A0C78 /* bytesex.c */; };
-		75AF22C61200965A003F2B8F /* checkout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194111F8C82E007A0C78 /* checkout.c */; };
 		75AF22C71200965A003F2B8F /* coff_bytesex.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194211F8C82E007A0C78 /* coff_bytesex.c */; };
 		75AF22C81200965A003F2B8F /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194311F8C82E007A0C78 /* crc32.c */; };
 		75AF22C91200965A003F2B8F /* errors.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561194611F8C82E007A0C78 /* errors.c */; };
@@ -317,6 +286,7 @@
 		75AF22DE1200965A003F2B8F /* version_number.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561195F11F8C82E007A0C78 /* version_number.c */; };
 		75AF22DF1200965A003F2B8F /* vm_flush_cache.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561196011F8C82E007A0C78 /* vm_flush_cache.c */; };
 		75AF22E01200965A003F2B8F /* writeout.c in Sources */ = {isa = PBXBuildFile; fileRef = 7561196111F8C82E007A0C78 /* writeout.c */; };
+		75CBD7E51217D8410003C614 /* CCTools-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 75611C8611F8D826007A0C78 /* CCTools-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -698,7 +668,7 @@
 		7561199311F8C82E007A0C78 /* sparc_disasm.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sparc_disasm.c; sourceTree = "<group>"; };
 		7561199411F8C82E007A0C78 /* sparc_disasm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sparc_disasm.h; sourceTree = "<group>"; };
 		75611C8511F8D826007A0C78 /* CCTools.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = CCTools.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		75611C8611F8D826007A0C78 /* CCTools-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CCTools-Info.plist"; path = "../../cctools-750/cctools/CCTools-Info.plist"; sourceTree = "<group>"; };
+		75611C8611F8D826007A0C78 /* CCTools-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CCTools-Info.plist"; path = "../../../../SymbolFinder/cctools/cctools/CCTools-Info.plist"; sourceTree = SOURCE_ROOT; };
 		75611FFC11FA400C007A0C78 /* InfoPlist.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; path = InfoPlist.strings; sourceTree = "<group>"; };
 		7566F67511FF671E001FF517 /* allocate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = allocate.h; sourceTree = "<group>"; };
 		7566F67611FF671E001FF517 /* arch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = arch.h; sourceTree = "<group>"; };
@@ -1549,14 +1519,12 @@
 				75611C8D11F8D85C007A0C78 /* fpu.h in Headers */,
 				75611C8E11F8D85C007A0C78 /* frame.h in Headers */,
 				75611C8F11F8D85C007A0C78 /* fp_regs.h in Headers */,
-				75611C9011F8D85C007A0C78 /* reg_help.h in Headers */,
 				75611C9111F8D85C007A0C78 /* macro_help.h in Headers */,
 				75611C9211F8D85C007A0C78 /* reg_help.h in Headers */,
 				75611C9311F8D85C007A0C78 /* reg.h in Headers */,
 				75611C9411F8D85C007A0C78 /* libsyminfo.h in Headers */,
 				75611C9511F8D85C007A0C78 /* aouthdr.h in Headers */,
 				75611C9611F8D85C007A0C78 /* base_relocs.h in Headers */,
-				75611C9711F8D85C007A0C78 /* bytesex.h in Headers */,
 				75611C9811F8D85C007A0C78 /* debug_directory.h in Headers */,
 				75611C9911F8D85C007A0C78 /* filehdr.h in Headers */,
 				75611C9A11F8D85C007A0C78 /* ms_dos_stub.h in Headers */,
@@ -1566,15 +1534,9 @@
 				75611C9E11F8D85C007A0C78 /* a.out.h in Headers */,
 				75611C9F11F8D85C007A0C78 /* exec.h in Headers */,
 				75611CA011F8D85C007A0C78 /* symseg.h in Headers */,
-				75611CA111F8D85C007A0C78 /* thread_status.h in Headers */,
 				75611CA211F8D85C007A0C78 /* thread_status.h in Headers */,
-				75611CA311F8D85C007A0C78 /* thread_status.h in Headers */,
-				75611CA411F8D85C007A0C78 /* thread_status.h in Headers */,
-				75611CA511F8D85C007A0C78 /* thread_status.h in Headers */,
 				75611CA611F8D85C007A0C78 /* machine.h in Headers */,
-				75611CA711F8D85C007A0C78 /* thread_status.h in Headers */,
 				75611CA811F8D85C007A0C78 /* arch.h in Headers */,
-				75611CA911F8D85C007A0C78 /* reloc.h in Headers */,
 				75611CAA11F8D85C007A0C78 /* dyld.h in Headers */,
 				75611CAB11F8D85C007A0C78 /* dyld_debug.h in Headers */,
 				75611CAC11F8D85C007A0C78 /* dyld_gdb.h in Headers */,
@@ -1582,35 +1544,21 @@
 				75611CAE11F8D85C007A0C78 /* fat.h in Headers */,
 				75611CAF11F8D85C007A0C78 /* getsect.h in Headers */,
 				75611CB011F8D85C007A0C78 /* gmon.h in Headers */,
-				75611CB111F8D85C007A0C78 /* reloc.h in Headers */,
-				75611CB211F8D85C007A0C78 /* swap.h in Headers */,
-				75611CB311F8D85C007A0C78 /* swap.h in Headers */,
-				75611CB411F8D85C007A0C78 /* reloc.h in Headers */,
-				75611CB511F8D85C007A0C78 /* swap.h in Headers */,
 				75611CB611F8D85C007A0C78 /* kld.h in Headers */,
 				75611CB711F8D85C007A0C78 /* ldsyms.h in Headers */,
 				75611CB811F8D85C007A0C78 /* loader.h in Headers */,
-				75611CB911F8D85C007A0C78 /* swap.h in Headers */,
-				75611CBA11F8D85C007A0C78 /* reloc.h in Headers */,
-				75611CBB11F8D85C007A0C78 /* swap.h in Headers */,
 				75611CBC11F8D85C007A0C78 /* nlist.h in Headers */,
 				75611CBD11F8D85C007A0C78 /* reloc.h in Headers */,
-				75611CBE11F8D85C007A0C78 /* swap.h in Headers */,
 				75611CBF11F8D85C007A0C78 /* ranlib.h in Headers */,
 				75611CC011F8D85C007A0C78 /* redo_prebinding.h in Headers */,
-				75611CC111F8D85C007A0C78 /* reloc.h in Headers */,
 				75611CC211F8D85C007A0C78 /* rld.h in Headers */,
 				75611CC311F8D85C007A0C78 /* rld_state.h in Headers */,
 				75611CC411F8D85C007A0C78 /* sarld.h in Headers */,
-				75611CC511F8D85C007A0C78 /* reloc.h in Headers */,
 				75611CC611F8D85C007A0C78 /* swap.h in Headers */,
 				75611CC711F8D85C007A0C78 /* stab.h in Headers */,
-				75611CC811F8D85C007A0C78 /* swap.h in Headers */,
-				75611CC911F8D85C007A0C78 /* reloc.h in Headers */,
 				75611CCA11F8D85C007A0C78 /* arm.h in Headers */,
 				75611CCB11F8D85C007A0C78 /* libsa.h in Headers */,
 				75611CCC11F8D85C007A0C78 /* allocate.h in Headers */,
-				75611CCD11F8D85C007A0C78 /* arch.h in Headers */,
 				75611CCE11F8D85C007A0C78 /* best_arch.h in Headers */,
 				75611CCF11F8D85C007A0C78 /* bool.h in Headers */,
 				75611CD011F8D85C007A0C78 /* breakout.h in Headers */,
@@ -1628,7 +1576,6 @@
 				75611CDC11F8D85C007A0C78 /* ofile.h in Headers */,
 				75611CDD11F8D85C007A0C78 /* openstep_mach.h in Headers */,
 				75611CDE11F8D85C007A0C78 /* print.h in Headers */,
-				75611CDF11F8D85C007A0C78 /* reloc.h in Headers */,
 				75611CE011F8D85C007A0C78 /* round.h in Headers */,
 				75611CE111F8D85C007A0C78 /* seg_addr_table.h in Headers */,
 				75611CE211F8D85C007A0C78 /* symbol.h in Headers */,
@@ -1637,9 +1584,7 @@
 				75611CE511F8D85C007A0C78 /* unix_standard_mode.h in Headers */,
 				75611CE611F8D85C007A0C78 /* version_number.h in Headers */,
 				75611CE711F8D85C007A0C78 /* vm_flush_cache.h in Headers */,
-				75611CE811F8D85C007A0C78 /* gmon.h in Headers */,
 				7566F69111FF671E001FF517 /* allocate.h in Headers */,
-				7566F69211FF671E001FF517 /* arch.h in Headers */,
 				7566F69311FF671E001FF517 /* best_arch.h in Headers */,
 				7566F69411FF671E001FF517 /* bool.h in Headers */,
 				7566F69511FF671E001FF517 /* breakout.h in Headers */,
@@ -1657,7 +1602,6 @@
 				7566F6A111FF671E001FF517 /* ofile.h in Headers */,
 				7566F6A211FF671E001FF517 /* openstep_mach.h in Headers */,
 				7566F6A311FF671E001FF517 /* print.h in Headers */,
-				7566F6A411FF671E001FF517 /* reloc.h in Headers */,
 				7566F6A511FF671E001FF517 /* round.h in Headers */,
 				7566F6A611FF671E001FF517 /* seg_addr_table.h in Headers */,
 				7566F6A711FF671E001FF517 /* symbol_list.h in Headers */,
@@ -1665,11 +1609,9 @@
 				7566F6A911FF671E001FF517 /* SymLoc.h in Headers */,
 				7566F6AA11FF671E001FF517 /* unix_standard_mode.h in Headers */,
 				7566F6AB11FF671E001FF517 /* version_number.h in Headers */,
-				7566F6AC11FF671E001FF517 /* vm_flush_cache.h in Headers */,
 				75AF21D112008D96003F2B8F /* libsyminfo.h in Headers */,
 				75AF21E812008F28003F2B8F /* aouthdr.h in Headers */,
 				75AF21E912008F28003F2B8F /* base_relocs.h in Headers */,
-				75AF21EA12008F28003F2B8F /* bytesex.h in Headers */,
 				75AF21EB12008F28003F2B8F /* debug_directory.h in Headers */,
 				75AF21EC12008F28003F2B8F /* filehdr.h in Headers */,
 				75AF21ED12008F28003F2B8F /* ms_dos_stub.h in Headers */,
@@ -1839,6 +1781,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				75CBD7E51217D8410003C614 /* CCTools-Info.plist in Resources */,
 				75611FFD11FA400C007A0C78 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1856,7 +1799,6 @@
 				75611CEC11F8D879007A0C78 /* arch_usage.c in Sources */,
 				75611CED11F8D879007A0C78 /* best_arch.c in Sources */,
 				75611CEE11F8D879007A0C78 /* breakout.c in Sources */,
-				75611CEF11F8D879007A0C78 /* checkout.c in Sources */,
 				75611CF011F8D879007A0C78 /* coff_bytesex.c in Sources */,
 				75611CF111F8D879007A0C78 /* crc32.c in Sources */,
 				75611CF211F8D879007A0C78 /* dylib_roots.c in Sources */,
@@ -1898,7 +1840,6 @@
 				75AF22C31200965A003F2B8F /* arch_usage.c in Sources */,
 				75AF22C41200965A003F2B8F /* best_arch.c in Sources */,
 				75AF22C51200965A003F2B8F /* bytesex.c in Sources */,
-				75AF22C61200965A003F2B8F /* checkout.c in Sources */,
 				75AF22C71200965A003F2B8F /* coff_bytesex.c in Sources */,
 				75AF22C81200965A003F2B8F /* crc32.c in Sources */,
 				75AF22C91200965A003F2B8F /* errors.c in Sources */,
@@ -1937,7 +1878,6 @@
 				75611AAA11F8C82E007A0C78 /* arch.c in Sources */,
 				75611AAB11F8C82E007A0C78 /* arch_usage.c in Sources */,
 				75611AAC11F8C82E007A0C78 /* best_arch.c in Sources */,
-				75611AAF11F8C82E007A0C78 /* checkout.c in Sources */,
 				75611AB011F8C82E007A0C78 /* coff_bytesex.c in Sources */,
 				75611AB111F8C82E007A0C78 /* crc32.c in Sources */,
 				75611AB411F8C82E007A0C78 /* errors.c in Sources */,
@@ -2021,7 +1961,9 @@
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = ".git *.nib *.lproj *.framework *.gch *.xcode* (*) CVS .svn";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_BUILTIN_FUNCTIONS = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "~/Sources/Darwin/cctools/include";
@@ -2037,6 +1979,8 @@
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				EXCLUDED_RECURSIVE_SEARCH_PATH_SUBDIRECTORIES = ".git *.nib *.lproj *.framework *.gch *.xcode* (*) CVS .svn";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_BUILTIN_FUNCTIONS = NO;
+				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "~/Sources/Darwin/cctools/include";
@@ -2059,7 +2003,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREFIX_HEADER = "";
-				INFOPLIST_FILE = "/Volumes/leopard/Sources/Darwin/cctools-750/cctools/CCTools-Info.plist";
+				INFOPLIST_FILE = "CCTools-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
@@ -2079,7 +2023,7 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_PREFIX_HEADER = "";
-				INFOPLIST_FILE = "/Volumes/leopard/Sources/Darwin/cctools-750/cctools/CCTools-Info.plist";
+				INFOPLIST_FILE = "CCTools-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				OTHER_LDFLAGS = "";
 				PREBINDING = NO;
