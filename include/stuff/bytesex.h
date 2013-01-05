@@ -40,7 +40,7 @@
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
 #undef VALID_THREAD_STATE_FLAVOR
-#include <mach/ppc/thread_status.h>
+//#include <mach/ppc/thread_status.h>
 #undef MACHINE_THREAD_STATE	/* need to undef these to avoid warnings */
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
@@ -50,7 +50,7 @@
 #include <mach/i386/thread_status.h>
 #include <mach/hppa/thread_status.h>
 #include <mach/sparc/thread_status.h>
-#include <mach/arm/thread_status.h>
+//#include <mach/arm/thread_status.h>
 #include <mach-o/nlist.h>
 #include <mach-o/reloc.h>
 #include <mach-o/ranlib.h>
@@ -191,21 +191,21 @@ __private_extern__ void swap_m68k_thread_state_user_reg(
     struct m68k_thread_state_user_reg *user_reg,
     enum byte_sex target_byte_sex);
 
-__private_extern__ void swap_ppc_thread_state_t(
-    ppc_thread_state_t *cpu,
-    enum byte_sex target_byte_sex);
-
-__private_extern__ void swap_ppc_thread_state64_t(
-    ppc_thread_state64_t *cpu,
-    enum byte_sex target_byte_sex);
-
-__private_extern__ void swap_ppc_float_state_t(
-    ppc_float_state_t *fpu,
-    enum byte_sex target_byte_sex);
-
-__private_extern__ void swap_ppc_exception_state_t(
-    ppc_exception_state_t *state,
-    enum byte_sex target_byte_sex);
+//__private_extern__ void swap_ppc_thread_state_t(
+//    ppc_thread_state_t *cpu,
+//    enum byte_sex target_byte_sex);
+//
+//__private_extern__ void swap_ppc_thread_state64_t(
+//    ppc_thread_state64_t *cpu,
+//    enum byte_sex target_byte_sex);
+//
+//__private_extern__ void swap_ppc_float_state_t(
+//    ppc_float_state_t *fpu,
+//    enum byte_sex target_byte_sex);
+//
+//__private_extern__ void swap_ppc_exception_state_t(
+//    ppc_exception_state_t *state,
+//    enum byte_sex target_byte_sex);
 
 __private_extern__ void swap_m88k_thread_state_grf_t(
     m88k_thread_state_grf_t *cpu,
@@ -303,9 +303,9 @@ __private_extern__ void swap_sparc_thread_state_fpu(
   struct sparc_thread_state_fpu *fpu,
   enum byte_sex target_byte_order);
 
-__private_extern__ void swap_arm_thread_state_t(
-    arm_thread_state_t *cpu,
-    enum byte_sex target_byte_sex);
+//__private_extern__ void swap_arm_thread_state_t(
+//    arm_thread_state_t *cpu,
+//    enum byte_sex target_byte_sex);
 
 __private_extern__ void swap_ident_command(
     struct ident_command *id_cmd,

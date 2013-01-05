@@ -1190,8 +1190,8 @@
 		75C38BA914A4595000B8BFAC /* pbxindex.header */ = {isa = PBXFileReference; lastKnownFileType = file; path = pbxindex.header; sourceTree = "<group>"; };
 		75C38BAA14A4595000B8BFAC /* protocols.pbxbtree */ = {isa = PBXFileReference; lastKnownFileType = file; path = protocols.pbxbtree; sourceTree = "<group>"; };
 		75C38BAB14A4595000B8BFAC /* refs.pbxbtree */ = {isa = PBXFileReference; lastKnownFileType = file; path = refs.pbxbtree; sourceTree = "<group>"; };
-		75C38BAD14A4595000B8BFAC /* control */ = {isa = PBXFileReference; lastKnownFileType = file; path = control; sourceTree = "<group>"; };
-		75C38BAE14A4595000B8BFAC /* strings */ = {isa = PBXFileReference; lastKnownFileType = file; path = strings; sourceTree = "<group>"; };
+		75C38BAD14A4595000B8BFAC /* control */ = {isa = PBXFileReference; lastKnownFileType = text; path = control; sourceTree = "<group>"; };
+		75C38BAE14A4595000B8BFAC /* strings */ = {isa = PBXFileReference; lastKnownFileType = text; path = strings; sourceTree = "<group>"; };
 		75C38BAF14A4595000B8BFAC /* subclasses.pbxbtree */ = {isa = PBXFileReference; lastKnownFileType = file; path = subclasses.pbxbtree; sourceTree = "<group>"; };
 		75C38BB014A4595000B8BFAC /* symbols0.pbxsymbols */ = {isa = PBXFileReference; lastKnownFileType = file; path = symbols0.pbxsymbols; sourceTree = "<group>"; };
 		75C38BB314A4595000B8BFAC /* All.dep */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = All.dep; sourceTree = "<group>"; };
@@ -5279,7 +5279,7 @@
 				INFOPLIST_FILE = "$(SRCROOT)/CCTools-Info.plist";
 				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx10.7;
 			};
 			name = Development;
 		};
@@ -5295,7 +5295,7 @@
 				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
-				SDKROOT = macosx10.6;
+				SDKROOT = macosx10.7;
 			};
 			name = Deployment;
 		};
