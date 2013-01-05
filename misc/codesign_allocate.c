@@ -26,7 +26,7 @@
 #include <limits.h>
 #include "stuff/errors.h"
 #include "stuff/breakout.h"
-#include "stuff/round.h"
+#include "stuff/rnd.h"
 #include "stuff/allocate.h"
 
 /*
@@ -59,6 +59,10 @@ static void setup_code_signature(
 static struct linkedit_data_command *add_code_sig_load_command(
     struct arch *arch,
     char *arch_name);
+
+/* apple_version is created by the libstuff/Makefile */
+extern char apple_version[];
+char *version = apple_version;
 
 /*
  * The codesign_allocate(1) tool has the following usage:
@@ -257,7 +261,7 @@ uint32_t narchs)
 		    archs[i].members[j].offset = offset;
 		    size = 0;
 		    if(archs[i].members[j].member_long_name == TRUE){
-			size = round(archs[i].members[j].member_name_size,
+			size = rnd(archs[i].members[j].member_name_size,
 				     sizeof(long));
 			archs[i].toc_long_name = TRUE;
 		    }
@@ -396,6 +400,24 @@ struct object *object)
 		object->output_split_info_data_size = 
 		    object->split_info_cmd->datasize;
 	    }
+	    if(object->func_starts_info_cmd != NULL){
+		object->output_func_start_info_data = 
+		(object->object_addr + object->func_starts_info_cmd->dataoff);
+		object->output_func_start_info_data_size = 
+		    object->func_starts_info_cmd->datasize;
+	    }
+	    if(object->data_in_code_cmd != NULL){
+		object->output_data_in_code_info_data = 
+		(object->object_addr + object->data_in_code_cmd->dataoff);
+		object->output_data_in_code_info_data_size = 
+		    object->data_in_code_cmd->datasize;
+	    }
+	    if(object->code_sign_drs_cmd != NULL){
+		object->output_code_sign_drs_info_data = 
+		(object->object_addr + object->code_sign_drs_cmd->dataoff);
+		object->output_code_sign_drs_info_data_size = 
+		    object->code_sign_drs_cmd->datasize;
+	    }
 	    object->output_ext_relocs = (struct relocation_info *)
 		(object->object_addr + object->dyst->extreloff);
 	    object->output_tocs =
@@ -439,6 +461,15 @@ struct object *object)
 		    sizeof(struct dylib_reference);
 	    if(object->split_info_cmd != NULL)
 		object->input_sym_info_size += object->split_info_cmd->datasize;
+	    if(object->func_starts_info_cmd != NULL)
+		object->input_sym_info_size +=
+		    object->func_starts_info_cmd->datasize;
+	    if(object->data_in_code_cmd != NULL)
+		object->input_sym_info_size +=
+		    object->data_in_code_cmd->datasize;
+	    if(object->code_sign_drs_cmd != NULL)
+		object->input_sym_info_size +=
+		    object->code_sign_drs_cmd->datasize;
 	    if(object->mh != NULL){
 		object->input_sym_info_size +=
 		    object->dyst->nmodtab *
@@ -462,7 +493,7 @@ struct object *object)
 	}
 	object->output_sym_info_size = object->input_sym_info_size;
 	if(object->code_sig_cmd != NULL){
-	    object->input_sym_info_size = round(object->input_sym_info_size,
+	    object->input_sym_info_size = rnd(object->input_sym_info_size,
 						16);
 	    object->input_sym_info_size += object->code_sig_cmd->datasize;
 	}
@@ -499,16 +530,16 @@ struct object *object)
 	}
 
 	/*
-	 * We did find a matching -a flag for this object.  Make sure this
-	 * object is input for the dynamic linker or an MH_OBJECT filetype and
-	 * can have a code signature.
+	 * We did find a matching -a flag for this object
 	 */
-	if((flags & MH_DYLDLINK) != MH_DYLDLINK &&
-	   object->mh_filetype != MH_OBJECT)
-	     fatal_arch(arch, member, "file is not input for the dynamic "
-			"linker or an MH_OBJECT file type and can't have a "
-			"code signature: ");
 	arch_signs[i].found = TRUE;
+
+	/*
+	 * We now allow statically linked objects as well as objects that are
+	 * input for the dynamic linker or an MH_OBJECT filetypes to have
+	 * code signatures.  So no checks are done here anymore based on the
+	 * flags or filetype in the mach_header.
+	 */
 	
 	/*
 	 * If this has a code signature load command reuse it and just change
@@ -521,7 +552,7 @@ struct object *object)
 		if(object->seg_linkedit->filesize >
 		   object->seg_linkedit->vmsize)
 		    object->seg_linkedit->vmsize =
-			round(object->seg_linkedit->filesize,
+			rnd(object->seg_linkedit->filesize,
 			      get_segalign_from_flag(&arch_signs[i].arch_flag));
 	    }
 	    else if(object->seg_linkedit64 != NULL){
@@ -532,7 +563,7 @@ struct object *object)
 		if(object->seg_linkedit64->filesize >
 		   object->seg_linkedit64->vmsize)
 		    object->seg_linkedit64->vmsize =
-			round(object->seg_linkedit64->filesize,
+			rnd(object->seg_linkedit64->filesize,
 			      get_segalign_from_flag(&arch_signs[i].arch_flag));
 	    }
 
@@ -540,7 +571,7 @@ struct object *object)
 	    object->output_code_sig_data_size = arch_signs[i].datasize;
 	    object->output_code_sig_data = NULL;
 
-	    object->output_sym_info_size = round(object->output_sym_info_size,
+	    object->output_sym_info_size = rnd(object->output_sym_info_size,
 						 16);
 	    object->output_sym_info_size += object->code_sig_cmd->datasize;
 	}
@@ -568,31 +599,31 @@ struct object *object)
 		      SEG_LINKEDIT " segment", arch->file_name,
 		      arch_signs[i].arch_flag.name);
 
-	    object->code_sig_cmd->dataoff = round(linkedit_end, 16);
+	    object->code_sig_cmd->dataoff = rnd(linkedit_end, 16);
 	    object->output_code_sig_data_size = arch_signs[i].datasize;
 	    object->output_code_sig_data = NULL;
 
-	    object->output_sym_info_size = round(object->output_sym_info_size,
+	    object->output_sym_info_size = rnd(object->output_sym_info_size,
 						 16);
 	    object->output_sym_info_size += object->code_sig_cmd->datasize;
 	    if(object->seg_linkedit != NULL){
 		object->seg_linkedit->filesize =
-		    round(object->seg_linkedit->filesize, 16) +
+		    rnd(object->seg_linkedit->filesize, 16) +
 		    object->code_sig_cmd->datasize;
 		if(object->seg_linkedit->filesize >
 		   object->seg_linkedit->vmsize)
 		    object->seg_linkedit->vmsize =
-			round(object->seg_linkedit->filesize,
+			rnd(object->seg_linkedit->filesize,
 			      get_segalign_from_flag(&arch_signs[i].arch_flag));
 	    }
 	    else if(object->seg_linkedit64 != NULL){
 		object->seg_linkedit64->filesize =
-		    round(object->seg_linkedit64->filesize, 16) +
+		    rnd(object->seg_linkedit64->filesize, 16) +
 		    object->code_sig_cmd->datasize;
 		if(object->seg_linkedit64->filesize >
 		   object->seg_linkedit64->vmsize)
 		    object->seg_linkedit64->vmsize =
-			round(object->seg_linkedit64->filesize,
+			rnd(object->seg_linkedit64->filesize,
 			      get_segalign_from_flag(&arch_signs[i].arch_flag));
 	    }
 	}
@@ -612,7 +643,7 @@ struct arch *arch,
 char *arch_name)
 {
     uint32_t i, j, low_fileoff;
-    uint32_t ncmds, sizeofcmds;
+    uint32_t ncmds, sizeofcmds, sizeof_mach_header;
     struct load_command *lc;
     struct segment_command *sg;
     struct segment_command_64 *sg64;
@@ -623,10 +654,12 @@ char *arch_name)
         if(arch->object->mh != NULL){
             ncmds = arch->object->mh->ncmds;
 	    sizeofcmds = arch->object->mh->sizeofcmds;
+	    sizeof_mach_header = sizeof(struct mach_header);
 	}
 	else{
             ncmds = arch->object->mh64->ncmds;
 	    sizeofcmds = arch->object->mh64->sizeofcmds;
+	    sizeof_mach_header = sizeof(struct mach_header_64);
 	}
 
 	/*
@@ -646,6 +679,8 @@ char *arch_name)
 		    for(j = 0; j < sg->nsects; j++){
 			if(s->size != 0 &&
 			(s->flags & S_ZEROFILL) != S_ZEROFILL &&
+			(s->flags & S_THREAD_LOCAL_ZEROFILL) !=
+				    S_THREAD_LOCAL_ZEROFILL &&
 			s->offset < low_fileoff)
 			    low_fileoff = s->offset;
 			s++;
@@ -664,6 +699,8 @@ char *arch_name)
 		    for(j = 0; j < sg64->nsects; j++){
 			if(s64->size != 0 &&
 			(s64->flags & S_ZEROFILL) != S_ZEROFILL &&
+			(s64->flags & S_THREAD_LOCAL_ZEROFILL) !=
+				      S_THREAD_LOCAL_ZEROFILL &&
 			s64->offset < low_fileoff)
 			    low_fileoff = s64->offset;
 			s64++;
@@ -677,7 +714,7 @@ char *arch_name)
 	    lc = (struct load_command *)((char *)lc + lc->cmdsize);
 	}
 	if(sizeofcmds + sizeof(struct linkedit_data_command) +
-	   sizeof(struct mach_header) > low_fileoff)
+	   sizeof_mach_header > low_fileoff)
 	    fatal("can't allocate code signature data for: %s (for architecture"
 		  " %s) because larger updated load commands do not fit (the "
 		  "program must be relinked using a larger -headerpad value)", 

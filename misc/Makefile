@@ -1,16 +1,21 @@
 export USE_APPLE_PB_SUPPORT = all
-OFLAG = -O
+OFLAG = -Os
 LTO = -DLTO_SUPPORT
 TRIE = -DTRIE_SUPPORT
 RC_OS = macos
-X_CFLAGS = -fno-builtin-round -fno-builtin-trunc
+X_CFLAGS =
 
-ifeq "mwccppc" "$(notdir $(CC))"
-  CFLAGS = $(OFLAG) $(LTO) $(TRIE) -g \
-	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR)
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+  CXX = $(shell xcrun -find -sdk $(SDKROOT) c++)
+endif
+ifeq "clang" "$(notdir $(CC))"
+  CFLAGS = $(OFLAG) $(LTO) $(TRIE) -g -Wall -Wno-format-nonliteral \
+	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR) $(SDK)
 else
   CFLAGS = $(OFLAG) $(LTO) $(TRIE) -g -Wall $(X_CFLAGS) \
-	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR)
+	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR) $(SDK)
 endif
 
 USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "mwccppc" ] && \
@@ -48,13 +53,15 @@ CFILES2 = lipo.c size.c strings.c nm.c checksyms.c inout.c \
 	 indr.c strip.c segedit.c cmpdylib.c \
 	 pagestuff.c redo_prebinding.c seg_addr_table.c \
 	 check_dylib.c seg_hack.c install_name_tool.c \
-	 codesign_allocate.c
+	 codesign_allocate.c ctf_insert.c
 INSTALL_FILES = $(CFILES1) $(CFILES2) Makefile notes Info.plist
 
-PROGS = lipo.NEW size.NEW strings.NEW nm.NEW libtool.NEW checksyms.NEW \
+OS_PROGS = lipo.NEW strings.NEW
+
+PROGS = $(OS_PROGS) size.NEW nm.NEW libtool.NEW checksyms.NEW \
 	indr.NEW strip.NEW nmedit.NEW segedit.NEW cmpdylib.NEW \
 	pagestuff.NEW redo_prebinding.NEW seg_addr_table.NEW check_dylib.NEW \
-	seg_hack.NEW install_name_tool.NEW codesign_allocate.NEW
+	seg_hack.NEW install_name_tool.NEW codesign_allocate.NEW ctf_insert.NEW
 
 teflon_all macos_all: $(PROGS)
 
@@ -62,12 +69,9 @@ nextstep_all: $(PROGS)
 
 all:	$(OFILE_DIR) $(SYMROOT) $(RC_OS)_all lib_ofiles
 
-lib_ofiles: $(OFILE_DIR) $(SYMROOT) libredo_prebinding.a
+os_tools: $(OFILE_DIR) $(SYMROOT) $(OS_PROGS)
 
-vers.c:
-	vers_string -c $(VERS_STRING_FLAGS) cctools_misc > $(OFILE_DIR)/$@
-	echo "const char apple_version[]= " \"`vers_string $(VERS_STRING_FLAGS) -f cctools`\" ";" >> \
-	$(OFILE_DIR)/$@
+lib_ofiles: $(OFILE_DIR) $(SYMROOT) libredo_prebinding.a
 
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
@@ -89,131 +93,136 @@ else
 	md -d -u $(OFILE_DIR)/Makedep $(OFILE_DIR)/$*.d
 endif
 
-checksyms.NEW: checksyms.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+checksyms.NEW: checksyms.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/checksyms.private.o \
-		$(OFILE_DIR)/checksyms.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/checksyms.NEW \
+		$(OFILE_DIR)/checksyms.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/checksyms.NEW \
 		$(OFILE_DIR)/checksyms.private.o
 
-cmpdylib.NEW: cmpdylib.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+cmpdylib.NEW: cmpdylib.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/cmpdylib.private.o \
-		$(OFILE_DIR)/cmpdylib.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/cmpdylib.NEW \
+		$(OFILE_DIR)/cmpdylib.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/cmpdylib.NEW \
 		$(OFILE_DIR)/cmpdylib.private.o
 
-lipo.NEW: lipo.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+lipo.NEW: lipo.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/lipo.private.o \
-		$(OFILE_DIR)/lipo.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/lipo.NEW \
+		$(OFILE_DIR)/lipo.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/lipo.NEW \
 		$(OFILE_DIR)/lipo.private.o
 
-size.NEW: size.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+size.NEW: size.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/size.private.o \
-		$(OFILE_DIR)/size.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/size.NEW \
+		$(OFILE_DIR)/size.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/size.NEW \
 		$(OFILE_DIR)/size.private.o
 
-strings.NEW: strings.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+strings.NEW: strings.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/strings.private.o \
-		$(OFILE_DIR)/strings.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/strings.NEW \
+		$(OFILE_DIR)/strings.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/strings.NEW \
 		$(OFILE_DIR)/strings.private.o
 
-nm.NEW: nm.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+nm.NEW: nm.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/nm.private.o \
-		$(OFILE_DIR)/nm.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/nm.NEW \
+		$(OFILE_DIR)/nm.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/nm.NEW \
 		$(OFILE_DIR)/nm.private.o
 
-libtool.NEW: libtool.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+libtool.NEW: libtool.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/libtool.private.o \
-		$(OFILE_DIR)/libtool.o $(OFILE_DIR)/vers.o \
-		$(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/libtool.NEW \
+		$(OFILE_DIR)/libtool.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/libtool.NEW \
 		$(OFILE_DIR)/libtool.private.o
 
-redo_prebinding.NEW: redo_prebinding.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+redo_prebinding.NEW: redo_prebinding.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/redo_prebinding.private.o \
-		$(OFILE_DIR)/redo_prebinding.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/redo_prebinding.NEW \
+		$(OFILE_DIR)/redo_prebinding.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/redo_prebinding.NEW \
 		$(OFILE_DIR)/redo_prebinding.private.o
 
 libredo_prebinding.a: libredo_prebinding.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r -o $(OBJROOT)/libredo.o \
+	$(CC) $(RC_CFLAGS) -nostdlib -r -o $(OBJROOT)/libredo.o \
 		libredo_prebinding.o $(LIBSTUFF)
 	libtool -static -o $(SYMROOT)/libredo_prebinding.a $(OBJROOT)/libredo.o
 
-seg_addr_table.NEW: seg_addr_table.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+seg_addr_table.NEW: seg_addr_table.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/seg_addr_table.private.o \
-		$(OFILE_DIR)/seg_addr_table.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/seg_addr_table.NEW \
+		$(OFILE_DIR)/seg_addr_table.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/seg_addr_table.NEW \
 		$(OFILE_DIR)/seg_addr_table.private.o
 
-check_dylib.NEW: check_dylib.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+check_dylib.NEW: check_dylib.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/check_dylib.private.o \
-		$(OFILE_DIR)/check_dylib.o $(OFILE_DIR)/vers.o \
-		$(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/check_dylib.NEW \
+		$(OFILE_DIR)/check_dylib.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/check_dylib.NEW \
 		$(OFILE_DIR)/check_dylib.private.o
 
-inout.NEW: inout.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+inout.NEW: inout.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/inout.private.o \
-		$(OFILE_DIR)/inout.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/inout.NEW \
+		$(OFILE_DIR)/inout.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/inout.NEW \
 		$(OFILE_DIR)/inout.private.o
 
-codesign_allocate.NEW: codesign_allocate.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+codesign_allocate.NEW: codesign_allocate.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/codesign_allocate.private.o \
-		$(OFILE_DIR)/codesign_allocate.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/codesign_allocate.NEW \
+		$(OFILE_DIR)/codesign_allocate.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/codesign_allocate.NEW \
 		-sectcreate __TEXT __info_plist Info.plist \
 		$(OFILE_DIR)/codesign_allocate.private.o
 
-seg_hack.NEW: seg_hack.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+ctf_insert.NEW: ctf_insert.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
+		-o $(OBJROOT)/ctf_insert.private.o \
+		$(OFILE_DIR)/ctf_insert.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/ctf_insert.NEW \
+		$(OFILE_DIR)/ctf_insert.private.o
+
+seg_hack.NEW: seg_hack.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/seg_hack.private.o \
-		$(OFILE_DIR)/seg_hack.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/seg_hack.NEW \
+		$(OFILE_DIR)/seg_hack.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/seg_hack.NEW \
 		$(OFILE_DIR)/seg_hack.private.o
 
-install_name_tool.NEW: install_name_tool.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+install_name_tool.NEW: install_name_tool.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/install_name_tool.private.o \
-		$(OFILE_DIR)/install_name_tool.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/install_name_tool.NEW \
+		$(OFILE_DIR)/install_name_tool.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/install_name_tool.NEW \
 		$(OFILE_DIR)/install_name_tool.private.o
 
-indr.NEW: indr.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+indr.NEW: indr.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/indr.private.o \
-		$(OFILE_DIR)/indr.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/indr.NEW \
+		$(OFILE_DIR)/indr.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/indr.NEW \
 		$(OFILE_DIR)/indr.private.o
 
-strip.NEW: strip.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+strip.NEW: strip.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/strip.private.o \
-		$(OFILE_DIR)/strip.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CXX) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/strip.NEW \
+		$(OFILE_DIR)/strip.o $(LIBSTUFF)
+	$(CXX) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/strip.NEW \
 		$(OFILE_DIR)/strip.private.o $(LIB_PRUNETRIE)
 
-nmedit.NEW: nmedit.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+nmedit.NEW: nmedit.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/nmedit.private.o \
-		$(OFILE_DIR)/nmedit.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/nmedit.NEW \
+		$(OFILE_DIR)/nmedit.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/nmedit.NEW \
 		$(OFILE_DIR)/nmedit.private.o
 
 nmedit.o: strip.c
@@ -226,18 +235,18 @@ else
 	md -d -u $(OFILE_DIR)/Makedep $(OFILE_DIR)/$*.d
 endif
 
-segedit.NEW: segedit.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+segedit.NEW: segedit.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/segedit.private.o \
-		$(OFILE_DIR)/segedit.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/segedit.NEW \
+		$(OFILE_DIR)/segedit.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/segedit.NEW \
 		$(OFILE_DIR)/segedit.private.o
 
-pagestuff.NEW: pagestuff.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+pagestuff.NEW: pagestuff.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/pagestuff.private.o \
-		$(OFILE_DIR)/pagestuff.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/pagestuff.NEW \
+		$(OFILE_DIR)/pagestuff.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/pagestuff.NEW \
 		$(OFILE_DIR)/pagestuff.private.o
 
 
@@ -253,6 +262,7 @@ clean: shlib_clean
 	$(SYMROOT)/check_dylib.NEW \
 	$(SYMROOT)/inout.NEW \
 	$(SYMROOT)/codesign_allocate.NEW \
+	$(SYMROOT)/ctf_insert.NEW \
 	$(SYMROOT)/seg_hack.NEW \
 	$(SYMROOT)/install_name_tool.NEW \
 	$(SYMROOT)/codesign_allocate.NEW \
@@ -267,8 +277,6 @@ clean: shlib_clean
 
 shlib_clean:
 	-rm -f \
-	$(OFILE_DIR)/vers.c \
-	$(OFILE_DIR)/vers.o \
 	$(OFILE_DIR)/lipo.o \
 	$(OFILE_DIR)/size.o \
 	$(OFILE_DIR)/strings.o \
@@ -278,6 +286,7 @@ shlib_clean:
 	$(OFILE_DIR)/checksyms.o \
 	$(OFILE_DIR)/inout.o \
 	$(OFILE_DIR)/codesign_allocate.o \
+	$(OFILE_DIR)/ctf_insert.o \
 	$(OFILE_DIR)/seg_hack.o \
 	$(OFILE_DIR)/install_name_tool.o \
 	$(OFILE_DIR)/indr.o \
@@ -299,6 +308,7 @@ shlib_clean:
 	$(OFILE_DIR)/checksyms.private.o \
 	$(OFILE_DIR)/inout.private.o \
 	$(OFILE_DIR)/codesign_allocate.private.o \
+	$(OFILE_DIR)/ctf_insert.private.o \
 	$(OFILE_DIR)/seg_hack.private.o \
 	$(OFILE_DIR)/install_name_tool.private.o \
 	$(OFILE_DIR)/indr.private.o \
@@ -312,19 +322,24 @@ shlib_clean:
 	$(OFILE_DIR)/strip.private.o \
 	-rm -f $(OFILE_DIR)/Makedep make.out
 
-install: all $(RC_OS)_install
+install: all $(RC_OS)_install os_tools_install
+
+install_os_tools: os_tools os_tools_install
+
+os_tools_install:
+	$(MKDIRS) $(DSTROOT)$(USRBINDIR)
+	install -c -s -m 555 $(SYMROOT)/strings.NEW \
+		$(DSTROOT)$(USRBINDIR)/strings
+	install -c -s -m 555 $(SYMROOT)/lipo.NEW $(DSTROOT)$(USRBINDIR)/lipo
 
 teflon_install macos_install: common_install
 	$(MKDIRS) $(DSTROOT)$(USRBINDIR)
 	install -c -s -m 555 $(SYMROOT)/strip.NEW $(DSTROOT)$(USRBINDIR)/strip
-	install -c -s -m 555 $(SYMROOT)/strings.NEW \
-		$(DSTROOT)$(USRBINDIR)/strings
 	install -c -s -m 555 $(SYMROOT)/size.NEW $(DSTROOT)$(USRBINDIR)/size
 	install -c -s -m 555 $(SYMROOT)/nm.NEW $(DSTROOT)$(USRBINDIR)/nm
 	install -c -s -m 555 $(SYMROOT)/libtool.NEW \
 		$(DSTROOT)$(USRBINDIR)/libtool
 	(cd $(DSTROOT)$(USRBINDIR); rm -f ranlib; ln -s libtool ranlib)
-	install -c -s -m 555 $(SYMROOT)/lipo.NEW $(DSTROOT)$(USRBINDIR)/lipo
 	install -c -s -m 555 $(SYMROOT)/segedit.NEW \
 		$(DSTROOT)$(USRBINDIR)/segedit
 	install -c -s -m 555 $(SYMROOT)/cmpdylib.NEW \
@@ -334,12 +349,12 @@ teflon_install macos_install: common_install
 	install -c -s -m 555 $(SYMROOT)/redo_prebinding.NEW \
 			  $(DSTROOT)$(USRBINDIR)/redo_prebinding
 	install -c -s -m 555 $(SYMROOT)/nmedit.NEW $(DSTROOT)$(USRBINDIR)/nmedit
-	(cd $(DSTROOT)$(LOCBINDIR); rm -f nmedit; \
-	 ln -s $(USRBINDIR)/nmedit nmedit)
 	install -c -s -m 555 $(SYMROOT)/install_name_tool.NEW \
 			  $(DSTROOT)$(USRBINDIR)/install_name_tool
 	install -c -s -m 555 $(SYMROOT)/codesign_allocate.NEW \
 			  $(DSTROOT)$(USRBINDIR)/codesign_allocate
+	install -c -s -m 555 $(SYMROOT)/ctf_insert.NEW \
+			  $(DSTROOT)$(USRBINDIR)/ctf_insert
 
 nextstep_install: common_install
 	$(MKDIRS) $(DSTROOT)$(BINDIR)

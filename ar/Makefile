@@ -1,8 +1,12 @@
-OFLAG = -O
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+endif
+OFLAG = -Os
 ifeq "mwccppc" "$(notdir $(CC))"
-  CFLAGS = -g $(OFLAG) -I$(SRCROOT)/../include
+  CFLAGS = -g $(OFLAG) -I$(SRCROOT)/../include $(SDK)
 else
-  CFLAGS = -g $(OFLAG) -Wall -I$(SRCROOT)/../include
+  CFLAGS = -g $(OFLAG) -Wall -I$(SRCROOT)/../include $(SDK)
 endif
 
 LIBSTUFF = -L$(SYMROOT)/../libstuff -lstuff
@@ -33,7 +37,7 @@ CFILES = append.c ar.c archive.c contents.c delete.c extract.c misc.c move.c \
 	 print.c replace.c 
 MAN1 = ar.1
 MAN5 = ar.5
-OBJS = $(CFILES:.c=.o) vers.o
+OBJS = $(CFILES:.c=.o)
 INSTALL_FILES = $(CFILES) $(HFILES) $(MAN1) $(MAN5) Makefile notes
 
 PRODUCT = ar
@@ -41,10 +45,7 @@ PRODUCT = ar
 all: $(OFILE_DIR) $(SYMROOT) $(PRODUCT).NEW
 
 $(PRODUCT).NEW:	$(OFILE_DIR) $(SYMROOT) $(OBJS)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/$@ $(OBJS) $(LIBSTUFF)
-
-vers.c:
-	vers_string -c $(VERS_STRING_FLAGS) $(PRODUCT) > $(OFILE_DIR)/$@
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/$@ $(OBJS) $(LIBSTUFF)
 
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
@@ -57,7 +58,7 @@ else
 endif
 
 clean: shlib_clean
-	-rm -f $(SYMROOT)/$(PRODUCT).NEW $(OFILE_DIR)/vers.c
+	-rm -f $(SYMROOT)/$(PRODUCT).NEW
 
 shlib_clean:
 	-cd $(OFILE_DIR); rm -f $(OBJS)

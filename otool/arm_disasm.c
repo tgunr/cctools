@@ -24,6 +24,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "stuff/arch.h"
 #include "stuff/bool.h"
 #include <stdio.h>
 #include <mach-o/loader.h>
@@ -33,9 +34,10 @@
 #include "opcode/arm.h"
 #include "stuff/bytesex.h"
 #include "stuff/symbol.h"
+#include "stuff/llvm.h"
 #include "otool.h"
 #include "ofile_print.h"
-
+#include "arm_disasm.h"
 
 /* Used by otool(1) to stay or switch out of thumb mode */
 enum bool in_thumb = FALSE;
@@ -110,7 +112,12 @@ struct disassemble_info { /* HACK'ed up for just what we need here */
 
   /* Function called to print ADDR.  */
   void (*print_address_func)
-    (bfd_vma addr, struct disassemble_info *info);
+    (bfd_vma pc, bfd_vma addr, struct disassemble_info *info);
+
+  /* Function called to print IMM for movw and movt.  */
+  enum bool (*print_immediate_func)
+    (bfd_vma pc, unsigned int imm, struct disassemble_info *info,
+     enum bool pool);
 
   /* For use by the disassembler.
      The top 16 bits are reserved for public use (and are documented here).
@@ -143,8 +150,742 @@ struct disassemble_info { /* HACK'ed up for just what we need here */
   uint32_t left;
   uint32_t addr;
   uint32_t sect_addr;
-
+  LLVMDisasmContextRef arm_dc;
+  LLVMDisasmContextRef thumb_dc;
+  char *object_addr;
+  uint32_t object_size;
 } dis_info;
+
+/*
+ * GetOpInfo() is the operand information call back function.  This is called to
+ * get the symbolic information for an operand of an arm instruction.  This
+ * is done from the relocation information, symbol table, etc.  That block of
+ * information is a pointer to the struct disassemble_info that was passed when
+ * the disassembler context was created and passed to back to GetOpInfo() when
+ * called back by LLVMDisasmInstruction().  For arm and thumb the instruction
+ * containing operand is at the PC parameter.  Since for arm and thumb they only
+ * have one operand with symbolic information the Offset parameter is zero and
+ * the Size parameter is 4 for arm and 4 or 2 for thumb, depending on the
+ * instruction width.  The information is returned in TagBuf and for both
+ * arm-apple-darwin10 and thumb-apple-dawrin10 Triples is the LLVMOpInfo1 struct
+ * defined in "llvm-c/Disassembler.h".  The value of TagType for both Triples is
+ * 1. If symbolic information is returned then this function returns 1 else it
+ * returns 0.
+ */
+static
+int
+GetOpInfo(
+void *DisInfo,
+uint64_t Pc,
+uint64_t Offset, /* should always be passed as 0 for arm or thumb */
+uint64_t Size,   /* should always be passed as 4 for arm or 2 or 4 for thumb */
+int TagType,     /* should always be passed as 1 for either Triple */
+void *TagBuf)
+{
+    struct disassemble_info *info;
+    struct LLVMOpInfo1 *op_info;
+    unsigned int value;
+    int32_t low, high, mid, reloc_found, offset;
+    uint32_t sect_offset, i, r_address, r_symbolnum, r_type, r_extern, r_length,
+	     r_value, r_scattered, pair_r_type, pair_r_value;
+    uint32_t other_half;
+    const char *strings, *name, *add, *sub;
+    struct relocation_info *relocs, *rp, *pairp;
+    struct scattered_relocation_info *srp, *spairp;
+    uint32_t nrelocs, strings_size, n_strx;
+    struct nlist *symbols;
+
+	info = (struct disassemble_info *)DisInfo;
+
+	op_info = (struct LLVMOpInfo1 *)TagBuf;
+	value = op_info->Value;
+	/* make sure all fields returned are zero if we don't set them */
+	memset(op_info, '\0', sizeof(struct LLVMOpInfo1));
+	op_info->Value = value;
+
+	if(Offset != 0 || (Size != 4 && Size != 2) || TagType != 1 ||
+	   info->verbose == FALSE)
+	    return(0);
+
+	sect_offset = Pc - info->sect_addr;
+	relocs = info->relocs;
+	nrelocs = info->nrelocs;
+	symbols = info->symbols;
+	strings = info->strings;
+	strings_size = info->strings_size;
+
+	r_symbolnum = 0;
+	r_type = 0;
+	r_extern = 0;
+	r_value = 0;
+	r_scattered = 0;
+	other_half = 0;
+	pair_r_value = 0;
+	n_strx = 0;
+	r_length = 0;
+
+	reloc_found = 0;
+	for(i = 0; i < nrelocs; i++){
+	    rp = &relocs[i];
+	    if(rp->r_address & R_SCATTERED){
+		srp = (struct scattered_relocation_info *)rp;
+		r_scattered = 1;
+		r_address = srp->r_address;
+		r_extern = 0;
+		r_length = srp->r_length;
+		r_type = srp->r_type;
+		r_value = srp->r_value;
+	    }
+	    else{
+		r_scattered = 0;
+		r_address = rp->r_address;
+		r_symbolnum = rp->r_symbolnum;
+		r_extern = rp->r_extern;
+		r_length = rp->r_length;
+		r_type = rp->r_type;
+	    }
+	    if(r_type == ARM_RELOC_PAIR){
+		fprintf(stderr, "Stray ARM_RELOC_PAIR relocation entry "
+			"%u\n", i);
+		continue;
+	    }
+	    if(r_address == sect_offset){
+		if(r_type == ARM_RELOC_HALF ||
+		   r_type == ARM_RELOC_SECTDIFF ||
+		   r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+		   r_type == ARM_RELOC_HALF_SECTDIFF){
+		    if(i+1 < nrelocs){
+			pairp = &rp[1];
+			if(pairp->r_address & R_SCATTERED){
+			    spairp = (struct scattered_relocation_info *)
+				     pairp;
+			    other_half = spairp->r_address & 0xffff;
+			    pair_r_type = spairp->r_type;
+			    pair_r_value = spairp->r_value;
+			}
+			else{
+			    other_half = pairp->r_address & 0xffff;
+			    pair_r_type = pairp->r_type;
+			}
+			if(pair_r_type != ARM_RELOC_PAIR){
+			    fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				    "entry after entry %u\n", i);
+			    continue;
+			}
+		    }
+		}
+		reloc_found = 1;
+		break;
+	    }
+	    if(r_type == ARM_RELOC_HALF ||
+	       r_type == ARM_RELOC_SECTDIFF ||
+	       r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+	       r_type == ARM_RELOC_HALF_SECTDIFF){
+		if(i+1 < nrelocs){
+		    pairp = &rp[1];
+		    if(pairp->r_address & R_SCATTERED){
+			spairp = (struct scattered_relocation_info *)pairp;
+			pair_r_type = spairp->r_type;
+		    }
+		    else{
+			pair_r_type = pairp->r_type;
+		    }
+		    if(pair_r_type == ARM_RELOC_PAIR)
+			i++;
+		    else
+			fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				"entry after entry %u\n", i);
+		}
+	    }
+	}
+
+	if(reloc_found && r_extern == 1){
+	    if(symbols != NULL)
+		n_strx = symbols[r_symbolnum].n_un.n_strx;
+	    if(n_strx >= strings_size)
+		name = "bad string offset";
+	    else
+		name = strings + n_strx;
+	    op_info->AddSymbol.Present = 1;
+	    op_info->AddSymbol.Name = name;
+	    if(value != 0){
+		switch(r_type){
+		case ARM_RELOC_HALF:
+		    if((r_length & 0x1) == 1){
+			op_info->Value = value << 16 | other_half;
+			op_info->VariantKind =
+			    LLVMDisassembler_VariantKind_ARM_HI16;
+		    }
+		    else{
+			op_info->Value = other_half << 16 | value;
+			op_info->VariantKind = 
+			    LLVMDisassembler_VariantKind_ARM_LO16;
+		    }
+		    break;
+		default:
+		    break;
+		}
+	    }
+	    else{
+		switch(r_type){
+		case ARM_RELOC_HALF:
+		    if((r_length & 0x1) == 1){
+			op_info->Value = value << 16 | other_half;
+			op_info->VariantKind =
+			    LLVMDisassembler_VariantKind_ARM_HI16;
+		    }
+		    else{
+			op_info->Value = other_half << 16 | value;
+			op_info->VariantKind =
+			    LLVMDisassembler_VariantKind_ARM_LO16;
+		    }
+		    break;
+		default:
+		    break;
+		}
+	    }
+	    return(1);
+	}
+
+	/*
+	 * If we have a branch that is not an external relocation entry then
+	 * return false so the code in tryAddingSymbolicOperand() can use
+	 * SymbolLookUp() with the branch target address to look up the symbol
+	 * and possiblity add an annotation for a symbol stub.
+	 */
+	if(reloc_found && r_extern == 0 &&
+	   (r_type == ARM_RELOC_BR24 || r_type == ARM_THUMB_RELOC_BR22))
+		return(0);
+
+	offset = 0;
+	if(reloc_found){
+	    if(r_type == ARM_RELOC_HALF ||
+	       r_type == ARM_RELOC_HALF_SECTDIFF){
+		if((r_length & 0x1) == 1)
+		    value = value << 16 | other_half;
+		else
+		    value = other_half << 16 | value;
+	    }
+	    if(r_scattered &&
+               (r_type != ARM_RELOC_HALF &&
+                r_type != ARM_RELOC_HALF_SECTDIFF)){
+		offset = value - r_value;
+		value = r_value;
+	    }
+	}
+
+	if(reloc_found && r_type == ARM_RELOC_HALF_SECTDIFF){
+	    if((r_length & 0x1) == 1)
+		op_info->VariantKind =
+		    LLVMDisassembler_VariantKind_ARM_HI16;
+	    else
+		op_info->VariantKind =
+		    LLVMDisassembler_VariantKind_ARM_LO16;
+	    add = guess_symbol(r_value, info->sorted_symbols,
+			       info->nsorted_symbols, info->verbose);
+	    sub = guess_symbol(pair_r_value, info->sorted_symbols,
+			       info->nsorted_symbols, info->verbose);
+	    offset = value - (r_value - pair_r_value);
+	    op_info->AddSymbol.Present = 1;
+	    if(add != NULL)
+		op_info->AddSymbol.Name = add;
+	    else
+		op_info->AddSymbol.Value = r_value;
+	    op_info->SubtractSymbol.Present = 1;
+	    if(sub != NULL)
+		op_info->SubtractSymbol.Name = sub;
+	    else
+		op_info->SubtractSymbol.Value = pair_r_value;
+	    op_info->Value = offset;
+	    return(1);
+	}
+
+	if(reloc_found == FALSE)
+	    return(0);
+
+	op_info->AddSymbol.Present = 1;
+	op_info->Value = offset;
+	if(reloc_found){
+	    if(r_type == ARM_RELOC_HALF){
+		if((r_length & 0x1) == 1)
+		    op_info->VariantKind =
+			LLVMDisassembler_VariantKind_ARM_HI16;
+		else
+		    op_info->VariantKind =
+			LLVMDisassembler_VariantKind_ARM_LO16;
+	    }
+	}
+	low = 0;
+	high = info->nsorted_symbols - 1;
+	mid = (high - low) / 2;
+	while(high >= low){
+	    if(info->sorted_symbols[mid].n_value == value){
+	        op_info->AddSymbol.Present = 1;
+		op_info->AddSymbol.Name = info->sorted_symbols[mid].name;
+		return(1);
+	    }
+	    if(info->sorted_symbols[mid].n_value > value){
+		high = mid - 1;
+		mid = (high + low) / 2;
+	    }
+	    else{
+		low = mid + 1;
+		mid = (high + low) / 2;
+	    }
+	}
+	op_info->AddSymbol.Value = value;
+	return(1);
+}
+
+/*
+ * guess_cstring_pointer() is passed the address of what might be a pointer to a
+ * literal string in a cstring section.  If that address is in a cstring section
+ * it returns a pointer to that string.  Else it returns NULL.
+ */
+static
+const char *
+guess_cstring_pointer(
+const uint32_t value,
+const uint32_t ncmds,
+const uint32_t sizeofcmds,
+const struct load_command *load_commands,
+const enum byte_sex load_commands_byte_sex,
+const char *object_addr,
+const uint32_t object_size)
+{
+    enum byte_sex host_byte_sex;
+    enum bool swapped;
+    uint32_t i, j, section_type, sect_offset, object_offset;
+    const struct load_command *lc;
+    struct load_command l;
+    struct segment_command sg;
+    struct section s;
+    char *p;
+    uint64_t big_load_end;
+    const char *name;
+
+	host_byte_sex = get_host_byte_sex();
+	swapped = host_byte_sex != load_commands_byte_sex;
+
+	lc = load_commands;
+	big_load_end = 0;
+	for(i = 0 ; i < ncmds; i++){
+	    memcpy((char *)&l, (char *)lc, sizeof(struct load_command));
+	    if(swapped)
+		swap_load_command(&l, host_byte_sex);
+	    if(l.cmdsize % sizeof(int32_t) != 0)
+		return(NULL);
+	    big_load_end += l.cmdsize;
+	    if(big_load_end > sizeofcmds)
+		return(NULL);
+	    switch(l.cmd){
+	    case LC_SEGMENT:
+		memcpy((char *)&sg, (char *)lc, sizeof(struct segment_command));
+		if(swapped)
+		    swap_segment_command(&sg, host_byte_sex);
+		p = (char *)lc + sizeof(struct segment_command);
+		for(j = 0 ; j < sg.nsects ; j++){
+		    memcpy((char *)&s, p, sizeof(struct section));
+		    p += sizeof(struct section);
+		    if(swapped)
+			swap_section(&s, 1, host_byte_sex);
+		    section_type = s.flags & SECTION_TYPE;
+		    if(section_type == S_CSTRING_LITERALS &&
+		       value >= s.addr && value < s.addr + s.size){
+			sect_offset = value - s.addr;
+			object_offset = s.offset + sect_offset;
+			if(object_offset < object_size){
+			    name = object_addr + object_offset;
+			    return(name);
+			}
+			else
+			    return(NULL);
+		    }
+		}
+		break;
+	    }
+	    if(l.cmdsize == 0){
+		return(NULL);
+	    }
+	    lc = (struct load_command *)((char *)lc + l.cmdsize);
+	    if((char *)lc > (char *)load_commands + sizeofcmds)
+		return(NULL);
+	}
+	return(NULL);
+}
+
+/*
+ * get_literal_pool_value() looks for a section difference relocation entry
+ * at the pc.  And if so returns the add_symbol's value indirectly through
+ * pointer_value and if that value has a symbol name then the name of a symbol
+ * indirectly though name.
+ */
+static
+enum bool
+get_literal_pool_value(
+bfd_vma pc,
+char const **name,
+uint32_t *pointer_value,
+struct disassemble_info *info)
+{
+    int32_t reloc_found;
+    uint32_t i, r_address, r_symbolnum, r_type, r_extern, r_length,
+	     r_value, r_scattered, pair_r_type, pair_r_value;
+    uint32_t other_half;
+    struct relocation_info *rp, *pairp;
+    struct scattered_relocation_info *srp, *spairp;
+    uint32_t n_strx;
+
+    struct relocation_info *relocs = info->relocs;
+    uint32_t nrelocs = info->nrelocs;
+    bfd_vma sect_offset = pc - info->sect_addr;
+
+	r_symbolnum = 0;
+	r_type = 0;
+	r_extern = 0;
+	r_value = 0;
+	r_scattered = 0;
+	other_half = 0;
+	pair_r_value = 0;
+	n_strx = 0;
+	r_length = 0;
+
+	reloc_found = 0;
+	for(i = 0; i < nrelocs; i++){
+	    rp = &relocs[i];
+	    if(rp->r_address & R_SCATTERED){
+		srp = (struct scattered_relocation_info *)rp;
+		r_scattered = 1;
+		r_address = srp->r_address;
+		r_extern = 0;
+		r_length = srp->r_length;
+		r_type = srp->r_type;
+		r_value = srp->r_value;
+	    }
+	    else{
+		r_scattered = 0;
+		r_address = rp->r_address;
+		r_symbolnum = rp->r_symbolnum;
+		r_extern = rp->r_extern;
+		r_length = rp->r_length;
+		r_type = rp->r_type;
+	    }
+	    if(r_type == ARM_RELOC_PAIR){
+		fprintf(stderr, "Stray ARM_RELOC_PAIR relocation entry "
+			"%u\n", i);
+		continue;
+	    }
+	    if(r_address == sect_offset){
+		if(r_type == ARM_RELOC_HALF ||
+		   r_type == ARM_RELOC_SECTDIFF ||
+		   r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+		   r_type == ARM_RELOC_HALF_SECTDIFF){
+		    if(i+1 < nrelocs){
+			pairp = &rp[1];
+			if(pairp->r_address & R_SCATTERED){
+			    spairp = (struct scattered_relocation_info *)
+				     pairp;
+			    other_half = spairp->r_address & 0xffff;
+			    pair_r_type = spairp->r_type;
+			    pair_r_value = spairp->r_value;
+			}
+			else{
+			    other_half = pairp->r_address & 0xffff;
+			    pair_r_type = pairp->r_type;
+			}
+			if(pair_r_type != ARM_RELOC_PAIR){
+			    fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				    "entry after entry %u\n", i);
+			    continue;
+			}
+		    }
+		}
+		reloc_found = 1;
+		break;
+	    }
+	    if(r_type == ARM_RELOC_HALF ||
+	       r_type == ARM_RELOC_SECTDIFF ||
+	       r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+	       r_type == ARM_RELOC_HALF_SECTDIFF){
+		if(i+1 < nrelocs){
+		    pairp = &rp[1];
+		    if(pairp->r_address & R_SCATTERED){
+			spairp = (struct scattered_relocation_info *)pairp;
+			pair_r_type = spairp->r_type;
+		    }
+		    else{
+			pair_r_type = pairp->r_type;
+		    }
+		    if(pair_r_type == ARM_RELOC_PAIR)
+			i++;
+		    else
+			fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				"entry after entry %u\n", i);
+		}
+	    }
+	}
+
+	if(reloc_found && r_length == 2 &&
+	   (r_type == ARM_RELOC_SECTDIFF ||
+	    r_type == ARM_RELOC_LOCAL_SECTDIFF)){
+	    *name = guess_symbol(r_value, info->sorted_symbols,
+			         info->nsorted_symbols, info->verbose);
+	    *pointer_value = r_value;
+	    return(TRUE);
+	}
+	*name = NULL;
+	*pointer_value = 0;
+	return(FALSE);
+}
+
+/*
+ * guess_literal_pointer() returns a name of a symbol or string if the value
+ * passed in is the address of a literal pointer and the literal pointer's value
+ * is and address of a symbol or cstring.  
+ */
+static
+const char *
+guess_literal_pointer(
+const uint32_t value,	  /* the value of the reference */
+const uint32_t pc,	  /* pc of the referencing instruction */
+uint64_t *reference_type, /* type returned, symbol name or string literal*/
+struct disassemble_info *info)
+{
+    uint32_t i, j, ncmds, sizeofcmds, sect_addr, object_size, pointer_value;
+    enum byte_sex object_byte_sex, host_byte_sex;
+    enum bool swapped;
+    struct load_command *load_commands, *lc, l;
+    struct segment_command sg;
+    struct section s;
+    char *object_addr, *p;
+    uint64_t big_load_end;
+    const char *name;
+
+	ncmds = info->ncmds;
+	sizeofcmds = info->sizeofcmds;
+	load_commands = info->load_commands;
+	sect_addr = info->sect_addr;
+	object_byte_sex = info->object_byte_sex;
+	object_addr = info->object_addr;
+	object_size = info->object_size;
+
+	host_byte_sex = get_host_byte_sex();
+	swapped = host_byte_sex != object_byte_sex;
+
+	lc = load_commands;
+	big_load_end = 0;
+	for(i = 0 ; i < ncmds; i++){
+	    memcpy((char *)&l, (char *)lc, sizeof(struct load_command));
+	    if(swapped)
+		swap_load_command(&l, host_byte_sex);
+	    if(l.cmdsize % sizeof(int32_t) != 0)
+		return(NULL);
+	    big_load_end += l.cmdsize;
+	    if(big_load_end > sizeofcmds)
+		return(NULL);
+	    switch(l.cmd){
+	    case LC_SEGMENT:
+		memcpy((char *)&sg, (char *)lc, sizeof(struct segment_command));
+		if(swapped)
+		    swap_segment_command(&sg, host_byte_sex);
+		p = (char *)lc + sizeof(struct segment_command);
+		for(j = 0 ; j < sg.nsects ; j++){
+		    memcpy((char *)&s, p, sizeof(struct section));
+		    p += sizeof(struct section);
+		    if(swapped)
+			swap_section(&s, 1, host_byte_sex);
+		    if(sect_addr == s.addr &&
+		       pc >= s.addr && pc < s.addr + s.size &&
+		       value >= s.addr && value + 4 <= s.addr + s.size){
+			/*
+			 * The problem here is while we can get the value in the
+			 * pool with code like this:
+			 * section_start = object_addr + s.offset;
+			 * section_offset = value - s.addr;
+			 * pool_value =
+			 *    section_start[section_offset + 3] << 24 |
+			 *    section_start[section_offset + 2] << 16 |
+			 *    section_start[section_offset + 1] << 8 |
+			 *    section_start[section_offset];
+			 * we don't know the pc value that will be added
+			 * to it. As that is done as a separate instruction like
+			 * "L1: add rx, pc, rt" where the ldr loaded up the
+			 * pool_value in rt.  The pool_value in a relocatable
+			 * object will be something like this:
+			 *    .long LC1-(L1+8)
+			 * where LC1 is the pointer_value we are interested in.
+			 * So we call get_literal_pool_value() to see if the
+			 * literal pool has a relocation entry.  If so it
+			 * returns the pointer_value and the name of a symbol
+			 * if any for that pointer_value.
+			 */
+			if(get_literal_pool_value(value, &name, &pointer_value,
+						  info) == FALSE){
+			    return(NULL);
+			}
+			/*
+			 * If the value in the literal pool is the address of a
+			 * symbol then get_literal_pool_value() will set name
+			 * to the name of the symbol.
+			 */
+			if(name != NULL){
+			    *reference_type =
+			     LLVMDisassembler_ReferenceType_Out_LitPool_SymAddr;
+			    return(name);
+			}
+			/*
+			 * If not, next see if the pointer value is pointing to
+			 * a cstring.
+			 */
+			name = guess_cstring_pointer(pointer_value, ncmds,
+					sizeofcmds, load_commands,
+					object_byte_sex, object_addr,
+					object_size);
+			if(name != NULL){
+			    *reference_type =
+			    LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr;
+			    return(name);
+			}
+		    }
+		}
+		break;
+	    }
+	    if(l.cmdsize == 0){
+		return(NULL);
+	    }
+	    lc = (struct load_command *)((char *)lc + l.cmdsize);
+	    if((char *)lc > (char *)load_commands + sizeofcmds)
+		return(NULL);
+	}
+	return(NULL);
+}
+
+/*
+ * The symbol lookup function passed to LLVMCreateDisasm().  It looks up the
+ * SymbolValue using the info passed vis the pointer to the struct
+ * disassemble_info that was passed when disassembler context is created and
+ * returns the symbol name that matches or NULL if none.
+ *
+ * When this is called to get a symbol name for a branch target then the
+ * ReferenceType can be LLVMDisassembler_ReferenceType_In_Branch and then
+ * SymbolValue will be looked for in the indirect symbol table to determine if
+ * it is an address for a symbol stub.  If so then the symbol name for that
+ * stub is returned indirectly through ReferenceName and then ReferenceType is
+ * set to LLVMDisassembler_ReferenceType_Out_SymbolStub.
+ * 
+ * This may be called may also be called by the disassembler for such things
+ * like adding a comment for a PC plus a constant offset load instruction to use
+ * a symbol name instead of a load address value.  In this case ReferenceType
+ * can be LLVMDisassembler_ReferenceType_In_PCrel_Load and the ReferencePC is
+ * also passed.  In this case if the SymbolValue is an address in a literal
+ * pool then the referenced pointer in the literal pool is used for the returned
+ * ReferenceName and then ReferenceType.  Which may be a symbol name and
+ * LLVMDisassembler_ReferenceType_Out_LitPool_SymAddr when the literal pool
+ * entry is the address of a symbol.  Or a pointer to a literal cstring and
+ * LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr when the literal pool
+ * entry is the address of a literal cstring.
+ */
+static
+const char *
+SymbolLookUp(
+void *DisInfo,
+uint64_t SymbolValue,
+uint64_t *ReferenceType,
+uint64_t ReferencePC,
+const char **ReferenceName)
+{
+    struct disassemble_info *info;
+    const char *SymbolName;
+
+	info = (struct disassemble_info *)DisInfo;
+	if(info->verbose == FALSE){
+	    *ReferenceName = NULL;
+	    *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+	    return(NULL);
+	}
+	SymbolName = guess_symbol(SymbolValue, info->sorted_symbols,
+				  info->nsorted_symbols, TRUE);
+
+	if(*ReferenceType == LLVMDisassembler_ReferenceType_In_Branch){
+	    *ReferenceName = guess_indirect_symbol(SymbolValue,
+		    info->ncmds, info->sizeofcmds, info->load_commands,
+		    info->object_byte_sex, info->indirect_symbols,
+		    info->nindirect_symbols, info->symbols, NULL,
+		    info->nsymbols, info->strings, info->strings_size);
+	    if(*ReferenceName != NULL)
+		*ReferenceType = LLVMDisassembler_ReferenceType_Out_SymbolStub;
+	    else
+		*ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+	}
+	else if(*ReferenceType == LLVMDisassembler_ReferenceType_In_PCrel_Load){
+	    *ReferenceName = guess_literal_pointer(SymbolValue, ReferencePC,
+						   ReferenceType, info);
+	    if(*ReferenceName == NULL)
+		*ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+	}
+	else{
+	    *ReferenceName = NULL;
+	    *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
+	}
+	return(SymbolName);
+}
+
+LLVMDisasmContextRef
+create_arm_llvm_disassembler(
+void)
+{
+    LLVMDisasmContextRef dc;
+
+	dc =
+#ifdef STATIC_LLVM
+	    LLVMCreateDisasm
+#else
+	    llvm_create_disasm
+#endif
+		("armv7-apple-darwin10", &dis_info, 1, GetOpInfo, SymbolLookUp);
+	return(dc);
+}
+
+void
+delete_arm_llvm_disassembler(
+LLVMDisasmContextRef dc)
+{
+#ifdef STATIC_LLVM
+	LLVMDisasmDispose
+#else
+	llvm_disasm_dispose
+#endif
+	    (dc);
+}
+
+LLVMDisasmContextRef
+create_thumb_llvm_disassembler(
+void)
+{
+    LLVMDisasmContextRef dc;
+
+	dc =
+#ifdef STATIC_LLVM
+	    LLVMCreateDisasm
+#else
+	    llvm_create_disasm
+#endif
+		("thumbv7-apple-darwin10", &dis_info, 1, GetOpInfo,
+		 SymbolLookUp);
+	return(dc);
+}
+
+void
+delete_thumb_llvm_disassembler(
+LLVMDisasmContextRef dc)
+{
+#ifdef STATIC_LLVM
+	LLVMDisasmDispose
+#else
+	llvm_disasm_dispose
+#endif
+	    (dc);
+}
 
 /* HACKS to avoid pulling in FSF binutils bfd/bfd-in2.h */
 #define bfd_mach_arm_XScale    10
@@ -375,11 +1116,15 @@ static const struct opcode32 coprocessor_opcodes[] =
   {FPU_VFP_EXT_V1xD, 0x0ef1fa10, 0x0fffffff, "fmstat%c"},
   {FPU_VFP_EXT_V1xD, 0x0ee00a10, 0x0fff0fff, "fmxr%c\tfpsid, %12-15r"},
   {FPU_VFP_EXT_V1xD, 0x0ee10a10, 0x0fff0fff, "fmxr%c\tfpscr, %12-15r"},
+  {FPU_VFP_EXT_V1xD, 0x0ee60a10, 0x0fff0fff, "fmxr%c\tmvfr1, %12-15r"},
+  {FPU_VFP_EXT_V1xD, 0x0ee70a10, 0x0fff0fff, "fmxr%c\tmvfr0, %12-15r"},
   {FPU_VFP_EXT_V1xD, 0x0ee80a10, 0x0fff0fff, "fmxr%c\tfpexc, %12-15r"},
   {FPU_VFP_EXT_V1xD, 0x0ee90a10, 0x0fff0fff, "fmxr%c\tfpinst, %12-15r\t@ Impl def"},
   {FPU_VFP_EXT_V1xD, 0x0eea0a10, 0x0fff0fff, "fmxr%c\tfpinst2, %12-15r\t@ Impl def"},
   {FPU_VFP_EXT_V1xD, 0x0ef00a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpsid"},
   {FPU_VFP_EXT_V1xD, 0x0ef10a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpscr"},
+  {FPU_VFP_EXT_V1xD, 0x0ef60a10, 0x0fff0fff, "fmrx%c\t%12-15r, mvfr1"},
+  {FPU_VFP_EXT_V1xD, 0x0ef70a10, 0x0fff0fff, "fmrx%c\t%12-15r, mvfr0"},
   {FPU_VFP_EXT_V1xD, 0x0ef80a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpexc"},
   {FPU_VFP_EXT_V1xD, 0x0ef90a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpinst\t@ Impl def"},
   {FPU_VFP_EXT_V1xD, 0x0efa0a10, 0x0fff0fff, "fmrx%c\t%12-15r, fpinst2\t@ Impl def"},
@@ -403,6 +1148,11 @@ static const struct opcode32 coprocessor_opcodes[] =
   {FPU_VFP_EXT_V1, 0x0eb10bc0, 0x0fbf0fd0, "fsqrtd%c\t%z1, %z0"},
   {FPU_VFP_EXT_V1, 0x0eb70ac0, 0x0fbf0fd0, "fcvtds%c\t%z1, %y0"},
   {FPU_VFP_EXT_V1, 0x0eb70bc0, 0x0fbf0fd0, "fcvtsd%c\t%y1, %z0"},
+  {FPU_VFP_EXT_V1, 0x0eb30ac0, 0x0fbf0fd0, "fcvttshp%c\t%y1, %y0"},
+  {FPU_VFP_EXT_V1, 0x0eb30a40, 0x0fbf0fd0, "fcvtbshp%c\t%y1, %y0"},
+  {FPU_VFP_EXT_V1, 0x0eb20ac0, 0x0fbf0fd0, "fcvtthps%c\t%y1, %y0"},
+  {FPU_VFP_EXT_V1, 0x0eb20a40, 0x0fbf0fd0, "fcvtbhps%c\t%y1, %y0"},
+
   {FPU_VFP_EXT_V1xD, 0x0eb80a40, 0x0fbf0fd0, "fuitos%c\t%y1, %y0"},
   {FPU_VFP_EXT_V1xD, 0x0eb80ac0, 0x0fbf0fd0, "fsitos%c\t%y1, %y0"},
   {FPU_VFP_EXT_V1, 0x0eb80b40, 0x0fbf0fd0, "fuitod%c\t%z1, %y0"},
@@ -640,6 +1390,8 @@ static const struct opcode32 neon_opcodes[] =
   {FPU_NEON_EXT_V1, 0xf3b00200, 0xffb30f10, "vpaddl%c.%7?us%18-19S2\t%12-15,22R, %0-3,5R"},
   {FPU_NEON_EXT_V1, 0xf3b00600, 0xffb30f10, "vpadal%c.%7?us%18-19S2\t%12-15,22R, %0-3,5R"},
   {FPU_NEON_EXT_V1, 0xf3b30600, 0xffb30e10, "vcvt%c.%7-8?usff%18-19Sa.%7-8?ffus%18-19Sa\t%12-15,22R, %0-3,5R"},
+  {FPU_NEON_EXT_V1, 0xf3b60700, 0xffbf0fd0, "fcvtshp%c\t%12-15,22Q, %0-3,5D"},
+  {FPU_NEON_EXT_V1, 0xf3b60600, 0xffbf0fd0, "fcvthps%c\t%12-15,22D, %0-3,5Q"},
 
   /* Three registers of the same length */
   {FPU_NEON_EXT_V1, 0xf2000110, 0xffb00f10, "vand%c\t%12-15,22R, %16-19,7R, %0-3,5R"},
@@ -725,10 +1477,10 @@ static const struct opcode32 neon_opcodes[] =
   {FPU_NEON_EXT_V1, 0xf3880410, 0xffb80f90, "vsri%c.8\t%12-15,22R, %0-3,5R, #%16-18e"},
   {FPU_NEON_EXT_V1, 0xf3880510, 0xffb80f90, "vsli%c.8\t%12-15,22R, %0-3,5R, #%16-18d"},
   {FPU_NEON_EXT_V1, 0xf3880610, 0xffb80f90, "vqshlu%c.s8\t%12-15,22R, %0-3,5R, #%16-18d"},
-  {FPU_NEON_EXT_V1, 0xf2900810, 0xfeb00fd0, "vqshrun%c.s32\t%12-15,22D, %0-3,5Q, #%16-19e"},
-  {FPU_NEON_EXT_V1, 0xf2900850, 0xfeb00fd0, "vqrshrun%c.s32\t%12-15,22D, %0-3,5Q, #%16-19e"},
-  {FPU_NEON_EXT_V1, 0xf2900910, 0xfeb00fd0, "vqshrn%c.%24?us32\t%12-15,22D, %0-3,5Q, #%16-19e"},
-  {FPU_NEON_EXT_V1, 0xf2900950, 0xfeb00fd0, "vqrshrn%c.%24?us32\t%12-15,22D, %0-3,5Q, #%16-19e"},
+  {FPU_NEON_EXT_V1, 0xf2800810, 0xfe800fd0, "vqshrun%c.s32\t%12-15,22D, %0-3,5Q, #%16-19e"},
+  {FPU_NEON_EXT_V1, 0xf2800850, 0xfe800fd0, "vqrshrun%c.s32\t%12-15,22D, %0-3,5Q, #%16-19e"},
+  {FPU_NEON_EXT_V1, 0xf2800910, 0xfe800fd0, "vqshrn%c.%24?us32\t%12-15,22D, %0-3,5Q, #%16-19e"},
+  {FPU_NEON_EXT_V1, 0xf2800950, 0xfe800fd0, "vqrshrn%c.%24?us32\t%12-15,22D, %0-3,5Q, #%16-19e"},
   {FPU_NEON_EXT_V1, 0xf2900a10, 0xfeb00fd0, "vshll%c.%24?us16\t%12-15,22D, %0-3,5Q, #%16-19d"},
   {FPU_NEON_EXT_V1, 0xf2880010, 0xfeb80f90, "vshr%c.%24?us8\t%12-15,22R, %0-3,5R, #%16-18e"},
   {FPU_NEON_EXT_V1, 0xf2880110, 0xfeb80f90, "vsra%c.%24?us8\t%12-15,22R, %0-3,5R, #%16-18e"},
@@ -741,7 +1493,7 @@ static const struct opcode32 neon_opcodes[] =
   {FPU_NEON_EXT_V1, 0xf3900410, 0xffb00f90, "vsri%c.16\t%12-15,22R, %0-3,5R, #%16-19e"},
   {FPU_NEON_EXT_V1, 0xf3900510, 0xffb00f90, "vsli%c.16\t%12-15,22R, %0-3,5R, #%16-19d"},
   {FPU_NEON_EXT_V1, 0xf3900610, 0xffb00f90, "vqshlu%c.s16\t%12-15,22R, %0-3,5R, #%16-19d"},
-  {FPU_NEON_EXT_V1, 0xf2a00a10, 0xfea00fd0, "vshll%c.%24?us32\t%12-15,22D, %0-3,5Q, #%16-20d"},
+  {FPU_NEON_EXT_V1, 0xf2a00a10, 0xfea00fd0, "vshll%c.%24?us32\t%12-15,22Q, %0-3,5D, #%16-20d"},
   {FPU_NEON_EXT_V1, 0xf2900010, 0xfeb00f90, "vshr%c.%24?us16\t%12-15,22R, %0-3,5R, #%16-19e"},
   {FPU_NEON_EXT_V1, 0xf2900110, 0xfeb00f90, "vsra%c.%24?us16\t%12-15,22R, %0-3,5R, #%16-19e"},
   {FPU_NEON_EXT_V1, 0xf2900210, 0xfeb00f90, "vrshr%c.%24?us16\t%12-15,22R, %0-3,5R, #%16-19e"},
@@ -888,6 +1640,7 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V3M, 0x00a00090, 0x0fa000f0, "%22?sumlal%20's%c\t%12-15r, %16-19r, %0-3r, %8-11r"},
 
   /* V7 instructions.  */
+  {ARM_EXT_V7, 0xf410f000, 0xfc70f000, "pldw\t%a"},
   {ARM_EXT_V7, 0xf450f000, 0xfd70f000, "pli\t%P"},
   {ARM_EXT_V7, 0x0320f0f0, 0x0ffffff0, "dbg%c\t#%0-3d"},
   {ARM_EXT_V7, 0xf57ff050, 0xfffffff0, "dmb\t%U"},
@@ -1114,12 +1867,12 @@ static const struct opcode32 arm_opcodes[] =
   {ARM_EXT_V1, 0x01a00060, 0x0def0060, "ror%20's%c\t%12-15r, %q"},
   {ARM_EXT_V1, 0x01c00000, 0x0de00000, "bic%20's%c\t%12-15r, %16-19r, %o"},
   {ARM_EXT_V1, 0x01e00000, 0x0de00000, "mvn%20's%c\t%12-15r, %o"},
-  {ARM_EXT_V1, 0x052d0004, 0x0fff0fff, "push%c\t{%12-15r}\t\t; (str%c %12-15r, %a)"},
+  {ARM_EXT_V1, 0x052d0004, 0x0fff0fff, "push%c\t{%12-15r}\t\t@ (str%c %12-15r, %a)"},
   {ARM_EXT_V1, 0x04000000, 0x0e100000, "str%22'b%t%c\t%12-15r, %a"},
   {ARM_EXT_V1, 0x06000000, 0x0e100ff0, "str%22'b%t%c\t%12-15r, %a"},
   {ARM_EXT_V1, 0x04000000, 0x0c100010, "str%22'b%t%c\t%12-15r, %a"},
   {ARM_EXT_V1, 0x06000010, 0x0e000010, "undefined"},
-  {ARM_EXT_V1, 0x049d0004, 0x0fff0fff, "pop%c\t{%12-15r}\t\t; (ldr%c %12-15r, %a)"},
+  {ARM_EXT_V1, 0x049d0004, 0x0fff0fff, "pop%c\t{%12-15r}\t\t@ (ldr%c %12-15r, %a)"},
   {ARM_EXT_V1, 0x04100000, 0x0c100000, "ldr%22'b%t%c\t%12-15r, %a"},
   {ARM_EXT_V1, 0x092d0000, 0x0fff0000, "push%c\t%m"},
   {ARM_EXT_V1, 0x08800000, 0x0ff00000, "stm%c\t%16-19r%21'!, %m%22'^"},
@@ -1149,7 +1902,7 @@ static const struct opcode32 arm_opcodes[] =
    %c			print the condition code
    %C			print the condition code, or "s" if not conditional
    %x			print warning if conditional an not at end of IT block"
-   %X			print "\t; unpredictable <IT:code>" if conditional
+   %X			print "\t@ unpredictable <IT:code>" if conditional
    %I			print IT instruction suffix and operands
    %<bitfield>r		print bitfield as an ARM register
    %<bitfield>Rc	print bitfield as an ARM register and follow it with
@@ -1314,7 +2067,7 @@ static const struct opcode16 thumb_opcodes[] =
        %P		print address for pli instruction.
        %c		print the condition code
        %x		print warning if conditional an not at end of IT block"
-       %X		print "\t; unpredictable <IT:code>" if conditional
+       %X		print "\t@ unpredictable <IT:code>" if conditional
 
        %<bitfield>d	print bitfield in decimal
        %<bitfield>W	print bitfield*4 in decimal
@@ -1337,6 +2090,7 @@ static const struct opcode32 thumb32_opcodes[] =
 {
   /* V7 instructions.  */
   {ARM_EXT_V7, 0xf910f000, 0xff70f000, "pli%c\t%a"},
+  {ARM_EXT_V7, 0xf830f000, 0xff70f000, "pldw%c\t%a"},
   {ARM_EXT_V7, 0xf3af80f0, 0xfffffff0, "dbg%c\t#%0-3d"},
   {ARM_EXT_V7, 0xf3bf8f50, 0xfffffff0, "dmb%c\t%U"},
   {ARM_EXT_V7, 0xf3bf8f40, 0xfffffff0, "dsb%c\t%U"},
@@ -1349,7 +2103,7 @@ static const struct opcode32 thumb32_opcodes[] =
   {ARM_EXT_V6T2, 0xf3af8001, 0xffffffff, "yield%c.w"},
   {ARM_EXT_V6T2, 0xf3af8002, 0xffffffff, "wfe%c.w"},
   {ARM_EXT_V6T2, 0xf3af8003, 0xffffffff, "wfi%c.w"},
-  {ARM_EXT_V6T2, 0xf3af9004, 0xffffffff, "sev%c.w"},
+  {ARM_EXT_V6T2, 0xf3af8004, 0xffffffff, "sev%c.w"},
   {ARM_EXT_V6T2, 0xf3af8000, 0xffffff00, "nop%c.w\t{%0-7d}"},
 
   {ARM_EXT_V6T2, 0xf3bf8f2f, 0xffffffff, "clrex%c"},
@@ -1453,6 +2207,7 @@ static const struct opcode32 thumb32_opcodes[] =
   {ARM_EXT_V6T2, 0xf0900f00, 0xfbf08f00, "teq%c\t%16-19r, %M"},
   {ARM_EXT_V6T2, 0xf1100f00, 0xfbf08f00, "cmn%c.w\t%16-19r, %M"},
   {ARM_EXT_V6T2, 0xf1b00f00, 0xfbf08f00, "cmp%c.w\t%16-19r, %M"},
+  {ARM_EXT_V6T2, 0xea4f0030, 0xffef80f0, "rrx%20's\t%8-11r, %0-3r"},
   {ARM_EXT_V6T2, 0xea4f0000, 0xffef8000, "mov%20's%c.w\t%8-11r, %S"},
   {ARM_EXT_V6T2, 0xea6f0000, 0xffef8000, "mvn%20's%c.w\t%8-11r, %S"},
   {ARM_EXT_V6T2, 0xe8c00070, 0xfff000f0, "strexd%c\t%0-3r, %12-15r, %8-11r, [%16-19r]"},
@@ -1827,10 +2582,10 @@ print_insn_coprocessor (bfd_vma pc, struct disassemble_info *info, int32_t given
 			func (stream, "]");
 			if (rn == 15)
 			  {
-			    func (stream, "\t; ");
+			    func (stream, "\t@ ");
                             /* FIXME: Unsure if info->bytes_per_chunk is the
                                right thing to use here.  */
-			    info->print_address_func (offset + pc
+			    info->print_address_func (pc, offset + pc
                               + info->bytes_per_chunk * 2, info);
 			  }
 		      }
@@ -2235,8 +2990,8 @@ print_arm_address (bfd_vma pc, struct disassemble_info *info, int32_t given)
 	  offset = pc + 8;
 	}
 
-      func (stream, "\t; ");
-      info->print_address_func (offset, info);
+      func (stream, "\t@ ");
+      info->print_address_func (pc, offset, info);
     }
   else
     {
@@ -2594,11 +3349,11 @@ print_insn_neon (struct disassemble_info *info, int32_t given, bfd_boolean thumb
                         switch (size)
                           {
                           case 8:
-			    func (stream, "#%ld\t; 0x%.2lx", value, value);
+			    func (stream, "#%ld\t@ 0x%.2lx", value, value);
                             break;
                           
                           case 16:
-                            func (stream, "#%ld\t; 0x%.4lx", value, value);
+                            func (stream, "#%ld\t@ 0x%.4lx", value, value);
                             break;
 
                           case 32:
@@ -2634,11 +3389,11 @@ print_insn_neon (struct disassemble_info *info, int32_t given, bfd_boolean thumb
 				    fvalue = f;
 				}
 #endif /* NOTYET */
-                                func (stream, "#%.7g\t; 0x%.8lx", fvalue,
+                                func (stream, "#%.7g\t@ 0x%.8lx", fvalue,
                                       value);
                               }
                             else
-                              func (stream, "#%ld\t; 0x%.8lx",
+                              func (stream, "#%ld\t@ 0x%.8lx",
 				(int32_t) ((value & 0x80000000)
 					? value | ~0xffffffffl : value), value);
                             break;
@@ -2822,8 +3577,8 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			  if ((given & 0x00800000) == 0)
 			    offset = -offset;
 
-			  func (stream, "[pc, #%d]\t; ", offset);
-			  info->print_address_func (offset + pc + 8, info);
+			  func (stream, "[pc, #%d]\t@ ", offset);
+			  info->print_address_func (pc, offset + pc + 8, info);
 			}
 		      else
 			{
@@ -2882,7 +3637,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		    case 'b':
 		      {
 			int disp = (((given & 0xffffff) ^ 0x800000) - 0x800000);
-			info->print_address_func (disp*4 + pc + 8, info);
+			info->print_address_func (pc, disp*4 + pc + 8, info);
 		      }
 		      break;
 
@@ -2921,7 +3676,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			  int immed = (given & 0xff);
 			  immed = (((immed << (32 - rotate))
 				    | (immed >> rotate)) & 0xffffffff);
-			  func (stream, "#%d\t; 0x%x", immed, immed);
+			  func (stream, "#%d\t@ 0x%x", immed, immed);
 			}
 		      else
 			arm_decode_shift (given, func, stream, 1);
@@ -2989,7 +3744,7 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			  /* H bit allows addressing to 2-byte boundaries.  */
 			  address += 2;
 
-		        info->print_address_func (address, info);
+		        info->print_address_func (pc, address, info);
 		      }
 		      break;
 
@@ -3009,9 +3764,13 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		      switch (given & 0xf)
 			{
 			case 0xf: func(stream, "sy"); break;
-			case 0x7: func(stream, "un"); break;
+			case 0x7: func(stream, "nsh"); break;
 			case 0xe: func(stream, "st"); break;
-			case 0x6: func(stream, "unst"); break;
+			case 0x6: func(stream, "nshst"); break;
+			case 0xb: func(stream, "ish"); break;
+			case 0xa: func(stream, "ishst"); break;
+			case 0x3: func(stream, "osh"); break;
+			case 0x2: func(stream, "oshst"); break;
 			default:
 			  func(stream, "#%d", (int)given & 0xf);
 			  break;
@@ -3046,9 +3805,9 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			    /* Some SWI instructions have special
 			       meanings.  */
 			    if ((given & 0x0fffffff) == 0x0FF00000)
-			      func (stream, "\t; IMB");
+			      func (stream, "\t@ IMB");
 			    else if ((given & 0x0fffffff) == 0x0FF00001)
-			      func (stream, "\t; IMBRange");
+			      func (stream, "\t@ IMBRange");
 			    break;
 			  case 'X':
 			    func (stream, "%01lx", value & 0xf);
@@ -3103,7 +3862,8 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			  int32_t hi = (given & 0x000f0000) >> 4;
 			  int32_t lo = (given & 0x00000fff);
 			  int32_t imm16 = hi | lo;
-			  func (stream, "#%lu\t; 0x%lx", imm16, imm16);
+			  (void)info->print_immediate_func (pc, imm16, info,
+							    FALSE);
 			}
 			break;
 
@@ -3176,12 +3936,12 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 
 	      case 'x':
 		if (ifthen_next_state)
-		  func (stream, "\t; unpredictable branch in IT block\n");
+		  func (stream, "\t@ unpredictable branch in IT block\n");
 		break;
 
 	      case 'X':
 		if (ifthen_state)
-		  func (stream, "\t; unpredictable <IT:%s>",
+		  func (stream, "\t@ unpredictable <IT:%s>",
 			arm_conditional[IFTHEN_COND]);
 		break;
 
@@ -3260,7 +4020,7 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  bfd_vma address = (pc + 4
 				     + ((given & 0x00f8) >> 2)
 				     + ((given & 0x0200) >> 3));
-		  info->print_address_func (address, info);
+		  info->print_address_func (pc, address, info);
 		}
 		break;
 
@@ -3327,7 +4087,7 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 			       bits of the address are dropped
 			       before the calculation.  */
 			    info->print_address_func
-			      (((pc + 4) & ~3) + (reg << 2), info);
+			      (pc, ((pc + 4) & ~3) + (reg << 2), info);
 			    break;
 
 			  case 'x':
@@ -3336,7 +4096,7 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 
 			  case 'B':
 			    reg = ((reg ^ (1 << bitend)) - (1 << bitend));
-			    info->print_address_func (reg * 2 + pc + 4, info);
+			    info->print_address_func (pc, reg * 2 + pc+4, info);
 			    break;
 
 			  case 'c':
@@ -3444,12 +4204,12 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 
 	      case 'x':
 		if (ifthen_next_state)
-		  func (stream, "\t; unpredictable branch in IT block\n");
+		  func (stream, "\t@ unpredictable branch in IT block\n");
 		break;
 
 	      case 'X':
 		if (ifthen_state)
-		  func (stream, "\t; unpredictable <IT:%s>",
+		  func (stream, "\t@ unpredictable <IT:%s>",
 			arm_conditional[IFTHEN_COND]);
 		break;
 
@@ -3459,7 +4219,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  imm12 |= (given & 0x000000ffu);
 		  imm12 |= (given & 0x00007000u) >> 4;
 		  imm12 |= (given & 0x04000000u) >> 15;
-		  func (stream, "#%u\t; 0x%x", imm12, imm12);
+		  func (stream, "#%u\t@ 0x%x", imm12, imm12);
 		}
 		break;
 
@@ -3482,7 +4242,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		      imm8 = (bits & 0x07f) | 0x80;
 		      imm  = (((imm8 << (32 - mod)) | (imm8 >> mod)) & 0xffffffff);
 		    }
-		  func (stream, "#%u\t; 0x%x", imm, imm);
+		  func (stream, "#%u\t@ 0x%x", imm, imm);
 		}
 		break;
 		  
@@ -3493,7 +4253,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  imm |= (given & 0x00007000u) >> 4;
 		  imm |= (given & 0x04000000u) >> 15;
 		  imm |= (given & 0x000f0000u) >> 4;
-		  func (stream, "#%u\t; 0x%x", imm, imm);
+		  (void)info->print_immediate_func (pc, imm, info, FALSE);
 		}
 		break;
 
@@ -3503,7 +4263,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  imm |= (given & 0x000f0000u) >> 16;
 		  imm |= (given & 0x00000ff0u) >> 0;
 		  imm |= (given & 0x0000000fu) << 12;
-		  func (stream, "#%u\t; 0x%x", imm, imm);
+		  (void)info->print_immediate_func (pc, imm, info, FALSE);
 		}
 		break;
 
@@ -3615,8 +4375,8 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 
 		  if (Rn == 15)
 		    {
-		      func (stream, "\t; ");
-		      info->print_address_func (((pc + 4) & ~3) + offset, info);
+		      func (stream, "\t@ ");
+		      info->print_address_func(pc, ((pc+4) & ~3) +offset, info);
 		    }
 		}
 	      skip:
@@ -3721,7 +4481,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  offset |= (given & 0x000007ff) << 1;
 		  offset -= (1 << 20);
 
-		  info->print_address_func (pc + 4 + offset, info);
+		  info->print_address_func (pc, pc + 4 + offset, info);
 		}
 		break;
 
@@ -3744,7 +4504,7 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		  if ((given & 0x00001000u) == 0)
 		      offset &= ~2u;
 
-		  info->print_address_func (offset, info);
+		  info->print_address_func (pc, offset, info);
 		}
 		break;
 
@@ -3773,9 +4533,13 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, int32_t given)
 		switch (given & 0xf)
 		  {
 		  case 0xf: func(stream, "sy"); break;
-		  case 0x7: func(stream, "un"); break;
 		  case 0xe: func(stream, "st"); break;
-		  case 0x6: func(stream, "unst"); break;
+		  case 0x7: func(stream, "nsh"); break;
+		  case 0x6: func(stream, "nshst"); break;
+		  case 0xb: func(stream, "ish"); break;
+		  case 0xa: func(stream, "ishst"); break;
+		  case 0x3: func(stream, "osh"); break;
+		  case 0x2: func(stream, "oshst"); break;
 		  default:
 		    func(stream, "#%d", (int)given & 0xf);
 		    break;
@@ -3973,6 +4737,8 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
   int           is_data = FALSE;
   unsigned int	size = 4;
   void	 	(*printer) (bfd_vma, struct disassemble_info *, int32_t);
+  char		*llvm_arch_name;
+  LLVMDisasmContextRef dc;
 
 #ifdef NOTDEF
   bfd_boolean   found = FALSE;
@@ -4132,6 +4898,8 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
       /* In ARM mode endianness is a straightforward issue: the instruction
 	 is four bytes long and is either ordered 0123 or 3210.  */
       printer = print_insn_arm;
+      llvm_arch_name = "arm";
+      dc = info->arm_dc;
       info->bytes_per_chunk = 4;
       size = 4;
 
@@ -4142,7 +4910,14 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 	given = (b[3]) | (b[2] << 8) | (b[1] << 16) | (b[0] << 24);
 
       /* Print the raw data, too. */
-      info->fprintf_func (info->stream, "%08x\t", (unsigned int) given);
+      if(!Xflag)
+        {
+          if(qflag)
+	    info->fprintf_func (info->stream, "\t");
+	  info->fprintf_func (info->stream, "%08x", (unsigned int) given);
+          if(!qflag)
+	    info->fprintf_func (info->stream, "\t");
+        }
     }
   else
     {
@@ -4151,6 +4926,8 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 	 the length of the current instruction are always to be found
 	 in the first two bytes.  */
       printer = print_insn_thumb16;
+      llvm_arch_name = "thumb";
+      dc = info->thumb_dc;
       info->bytes_per_chunk = 2;
       size = 2;
 
@@ -4175,14 +4952,32 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
 		given = (b[1]) | (b[0] << 8) | (given << 16);
 
 	      /* Print the raw data, too. */
-	      info->fprintf_func (info->stream, "%08x\t", (unsigned int) given);
-
+	      if(!Xflag)
+		{
+		  if(qflag)
+		    info->fprintf_func (info->stream, "\t");
+	          info->fprintf_func (info->stream, "%08x",
+				      (unsigned int) given);
+		  if(!qflag)
+		    info->fprintf_func (info->stream, "\t");
+		}
 	      printer = print_insn_thumb32;
+	      llvm_arch_name = "thumbv7";
+	      dc = info->thumb_dc;
 	      size = 4;
 	    }
-	  else
+	  else {
 	    /* Print the raw data, too. */
-	    info->fprintf_func (info->stream, "    %04x\t",(unsigned int)given);
+	    if(!Xflag)
+	      {
+		if(qflag)
+		  info->fprintf_func (info->stream, "\t");
+	        info->fprintf_func (info->stream, "    %04x",
+				    (unsigned int)given);
+		if(!qflag)
+		  info->fprintf_func (info->stream, "\t");
+	      }
+	   }
 	}
 
       if (ifthen_address != pc)
@@ -4206,7 +5001,29 @@ print_insn (bfd_vma pc, struct disassemble_info *info, bfd_boolean little)
        addresses, since the addend is not currently pc-relative.  */
     pc = 0;
 
-  printer (pc, info, given);
+  if (qflag)
+    {
+      char dst[4096];
+      dst[4095] = '\0';
+      if(
+#ifdef STATIC_LLVM
+	 LLVMDisasmInstruction
+#else
+         llvm_disasm_instruction
+#endif
+	    (dc, (uint8_t *)info->sect, size, pc, dst, 4095) != 0)
+	printf("%s", dst);
+      else {
+	if (size == 4)
+	  info->fprintf_func (info->stream, "\t.long\t0x%08x", given);
+	else if (size == 2)
+	  info->fprintf_func (info->stream, "\t.short\t0x%04x", given);
+        else
+	  info->fprintf_func (info->stream, "\tinvalid instruction encoding");
+      }
+    }
+  else
+    printer (pc, info, given);
 
   if (is_thumb)
     {
@@ -4234,6 +5051,7 @@ print_insn_little_arm (bfd_vma pc, struct disassemble_info *info)
 static
 void
 print_address_func(
+bfd_vma pc,
 bfd_vma addr,
 struct disassemble_info *info)
 {
@@ -4246,7 +5064,7 @@ struct disassemble_info *info)
     uint32_t nsymbols = info->nsymbols;
     char *strings = info->strings;
     uint32_t strings_size = info->strings_size;
-    bfd_vma r_address = addr - info->sect_addr;
+    bfd_vma r_address = pc - info->sect_addr;
 
     if(info->verbose){
 	/* If there's a relocation at this address, include the referenced
@@ -4278,15 +5096,382 @@ struct disassemble_info *info)
     }
     fprintf(stream, "0x%x", addr);
     if(info->verbose){
-	const char *indirect_symbol_name;
-	indirect_symbol_name = guess_indirect_symbol (addr,
-		info->ncmds, info->sizeofcmds, info->load_commands,
-		info->object_byte_sex, info->indirect_symbols,
-		info->nindirect_symbols, info->symbols, NULL,
-		info->nsymbols, info->strings, info->strings_size);
-	if(indirect_symbol_name != NULL)
-	    printf("\t; symbol stub for: %s", indirect_symbol_name);
+	name = guess_indirect_symbol(addr, info->ncmds, info->sizeofcmds,
+		   info->load_commands, info->object_byte_sex,
+		   info->indirect_symbols, info->nindirect_symbols,
+		   info->symbols, NULL, info->nsymbols, info->strings,
+		   info->strings_size);
+	if(name != NULL)
+	    fprintf(stream, "\t@ symbol stub for: %s", name);
+	else{
+	    uint64_t reference_type;
+	    reference_type = LLVMDisassembler_ReferenceType_In_PCrel_Load;
+	    name = guess_literal_pointer(addr, pc, &reference_type, info);
+	    if(name != NULL){
+		fprintf(stream, " literal pool for: ");
+		if(reference_type ==
+		   LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr)
+		    fprintf(stream, "\"%s\"", name);
+		else
+		    fprintf(stream, "%s", name);
+	    }
+	}
     }
+}
+
+/*
+ * print_immediate_func() prints the 'immediate' value passed to it which is
+ * at the pc by using the relocation entries, symbol and string tables in the
+ * disassemble_info.  If pool is TRUE then it only looks for what might be a
+ * literal pool pointer that has a section difference relocation entry and
+ * if found prints it as a .long.  If pool is TRUE and it does not print
+ * anything then FALSE is returned, else TRUE is returned in all other cases.
+ */
+static
+enum bool
+print_immediate_func(
+bfd_vma pc,
+unsigned int value,
+struct disassemble_info *info,
+enum bool pool)
+{
+    int32_t low, high, mid, reloc_found, offset;
+    uint32_t i, r_address, r_symbolnum, r_type, r_extern, r_length,
+	     r_value, r_scattered, pair_r_type, pair_r_value;
+    uint32_t other_half;
+    const char *name, *add, *sub;
+    struct relocation_info *rp, *pairp;
+    struct scattered_relocation_info *srp, *spairp;
+    uint32_t n_strx;
+
+    void *stream = info->stream;
+    struct relocation_info *relocs = info->relocs;
+    uint32_t nrelocs = info->nrelocs;
+    struct nlist *symbols = info->symbols;
+    char *strings = info->strings;
+    uint32_t strings_size = info->strings_size;
+    bfd_vma sect_offset = pc - info->sect_addr;
+
+	r_symbolnum = 0;
+	r_type = 0;
+	r_extern = 0;
+	r_value = 0;
+	r_scattered = 0;
+	other_half = 0;
+	pair_r_value = 0;
+	n_strx = 0;
+	r_length = 0;
+
+	if(info->verbose == FALSE && pool == FALSE){
+	    fprintf(stream, "#%u\t@ 0x%x", value, value);
+	    return(TRUE);
+	}
+	reloc_found = 0;
+	for(i = 0; i < nrelocs; i++){
+	    rp = &relocs[i];
+	    if(rp->r_address & R_SCATTERED){
+		srp = (struct scattered_relocation_info *)rp;
+		r_scattered = 1;
+		r_address = srp->r_address;
+		r_extern = 0;
+		r_length = srp->r_length;
+		r_type = srp->r_type;
+		r_value = srp->r_value;
+	    }
+	    else{
+		r_scattered = 0;
+		r_address = rp->r_address;
+		r_symbolnum = rp->r_symbolnum;
+		r_extern = rp->r_extern;
+		r_length = rp->r_length;
+		r_type = rp->r_type;
+	    }
+	    if(r_type == ARM_RELOC_PAIR){
+		fprintf(stderr, "Stray ARM_RELOC_PAIR relocation entry "
+			"%u\n", i);
+		continue;
+	    }
+	    if(r_address == sect_offset){
+		if(r_type == ARM_RELOC_HALF ||
+		   r_type == ARM_RELOC_SECTDIFF ||
+		   r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+		   r_type == ARM_RELOC_HALF_SECTDIFF){
+		    if(i+1 < nrelocs){
+			pairp = &rp[1];
+			if(pairp->r_address & R_SCATTERED){
+			    spairp = (struct scattered_relocation_info *)
+				     pairp;
+			    other_half = spairp->r_address & 0xffff;
+			    pair_r_type = spairp->r_type;
+			    pair_r_value = spairp->r_value;
+			}
+			else{
+			    other_half = pairp->r_address & 0xffff;
+			    pair_r_type = pairp->r_type;
+			}
+			if(pair_r_type != ARM_RELOC_PAIR){
+			    fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				    "entry after entry %u\n", i);
+			    continue;
+			}
+		    }
+		}
+		reloc_found = 1;
+		break;
+	    }
+	    if(r_type == ARM_RELOC_HALF ||
+	       r_type == ARM_RELOC_SECTDIFF ||
+	       r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+	       r_type == ARM_RELOC_HALF_SECTDIFF){
+		if(i+1 < nrelocs){
+		    pairp = &rp[1];
+		    if(pairp->r_address & R_SCATTERED){
+			spairp = (struct scattered_relocation_info *)pairp;
+			pair_r_type = spairp->r_type;
+		    }
+		    else{
+			pair_r_type = pairp->r_type;
+		    }
+		    if(pair_r_type == ARM_RELOC_PAIR)
+			i++;
+		    else
+			fprintf(stderr, "No ARM_RELOC_PAIR relocation "
+				"entry after entry %u\n", i);
+		}
+	    }
+	}
+
+	/*
+	 * If we are looking for possible literal pools, then only print
+	 * something if we find a relocation entry for .long that is a
+	 * section difference.
+	 */
+	if(pool){
+	    if(reloc_found && r_length == 2 &&
+	       (r_type == ARM_RELOC_SECTDIFF ||
+		r_type == ARM_RELOC_LOCAL_SECTDIFF)){
+		if(!Xflag){
+		    if(qflag)
+			fprintf(stream, "\t");
+		    fprintf(stream, "%08x\t", value);
+		}
+		fprintf(stream, ".long\t");
+		add = guess_symbol(r_value, info->sorted_symbols,
+				   info->nsorted_symbols, info->verbose);
+		sub = guess_symbol(pair_r_value, info->sorted_symbols,
+				   info->nsorted_symbols, info->verbose);
+		/*
+		 * Since most literal pool pointers are something like:
+		 *	.long symbol - (pic_base + offset)
+		 * we calculate the offset this way and print the expression
+		 * this way instead of:
+		 *	.long symbol - picbase + offset
+		 * as offset would appear to be a negative number.
+		 */
+		offset = - (value + pair_r_value - r_value);
+		if(add != NULL)
+		    fprintf(stream, "%s", add);
+		else
+		    fprintf(stream, "0x%x", (unsigned int)r_value);
+		if(sub != NULL)
+		    fprintf(stream, "-(%s", sub);
+		else
+		    fprintf(stream, "-(0x%x", (unsigned int)pair_r_value);
+		if(offset != 0)
+		    fprintf(stream, "+0x%x)", (unsigned int)offset);
+		fprintf(stream, "\n");
+		/* return indicating we printed something */
+		return(TRUE);
+	    }
+	    /* return indicating we printed nothing */
+	    return(FALSE);
+	}
+
+	if(reloc_found && r_extern == 1){
+	    if(symbols != NULL)
+		n_strx = symbols[r_symbolnum].n_un.n_strx;
+	    if(n_strx >= strings_size)
+		name = "bad string offset";
+	    else
+		name = strings + n_strx;
+	    if(value != 0){
+		switch(r_type){
+		case ARM_RELOC_HALF:
+		    if((r_length & 0x1) == 1){
+			value = value << 16 | other_half;
+			fprintf(stream, ":upper16:%s+0x%x", name,
+				(unsigned int)value);
+		    }
+		    else{
+			value = other_half << 16 | value;
+			fprintf(stream, ":lower16:%s+0x%x", name,
+				(unsigned int)value);
+		    }
+		    break;
+		default:
+		    fprintf(stream, "%s+0x%x", name, (unsigned int)value);
+		    break;
+		}
+	    }
+	    else{
+		switch(r_type){
+		case ARM_RELOC_HALF:
+		    if((r_length & 0x1) == 1){
+			value = value << 16 | other_half;
+			if(value == 0)
+			    fprintf(stream, ":upper16:%s", name);
+			else
+			    fprintf(stream, ":upper16:%s+0x%x", name,
+				    (unsigned int)value);
+		    }
+		    else{
+			value = other_half << 16 | value;
+			if(value == 0)
+			    fprintf(stream, ":lower16:%s", name);
+			else
+			    fprintf(stream, ":lower16:%s+0x%x", name,
+				    (unsigned int)value);
+		    }
+		    break;
+		default:
+		    if(value == 0)
+			fprintf(stream, "%s", name);
+		    else
+			fprintf(stream, "%s+0x%x", name, (unsigned int)value);
+		}
+	    }
+	    return(TRUE);
+	}
+
+	offset = 0;
+	if(reloc_found){
+	    if(r_type == ARM_RELOC_HALF ||
+	       r_type == ARM_RELOC_HALF_SECTDIFF){
+		if((r_length & 0x1) == 1)
+		    value = value << 16 | other_half;
+		else
+		    value = other_half << 16 | value;
+	    }
+	    if(r_scattered &&
+               (r_type != ARM_RELOC_HALF &&
+                r_type != ARM_RELOC_HALF_SECTDIFF)){
+		offset = value - r_value;
+		value = r_value;
+	    }
+	}
+
+	if(reloc_found && r_type == ARM_RELOC_HALF_SECTDIFF){
+	    if((r_length & 0x1) == 1)
+		fprintf(stream, ":upper16:");
+	    else
+		fprintf(stream, ":lower16:");
+	    add = guess_symbol(r_value, info->sorted_symbols,
+			       info->nsorted_symbols, info->verbose);
+	    sub = guess_symbol(pair_r_value, info->sorted_symbols,
+			       info->nsorted_symbols, info->verbose);
+	    offset = value - (r_value - pair_r_value);
+	    if(add != NULL)
+		fprintf(stream, "%s", add);
+	    else
+		fprintf(stream, "0x%x", (unsigned int)r_value);
+	    if(sub != NULL)
+		fprintf(stream, "-%s", sub);
+	    else
+		fprintf(stream, "-0x%x", (unsigned int)pair_r_value);
+	    if(offset != 0)
+		fprintf(stream, "+0x%x", (unsigned int)offset);
+	    return(TRUE);
+	}
+
+	low = 0;
+	high = info->nsorted_symbols - 1;
+	mid = (high - low) / 2;
+	while(high >= low){
+	    if(info->sorted_symbols[mid].n_value == value){
+		if(reloc_found){
+		    switch(r_type){
+		    case ARM_RELOC_HALF:
+			if((r_length & 0x1) == 1){
+			    if(offset == 0)
+				fprintf(stream, ":upper16:%s",
+				       info->sorted_symbols[mid].name);
+			    else
+				fprintf(stream, ":upper16:%s+0x%x",
+					info->sorted_symbols[mid].name,
+					(unsigned int)offset);
+			}
+			else{
+			    if(offset == 0)
+				fprintf(stream, ":lower16:%s",
+				       info->sorted_symbols[mid].name);
+			    else
+				fprintf(stream, ":lower16:%s+0x%x",
+				       info->sorted_symbols[mid].name,
+				       (unsigned int)offset);
+			}
+			break;
+		    default:
+			if(offset == 0)
+			    fprintf(stream,"%s",info->sorted_symbols[mid].name);
+			else
+			    fprintf(stream, "%s+0x%x",
+				   info->sorted_symbols[mid].name,
+				   (unsigned int)offset);
+			break;
+		    }
+		}
+		else{
+		    if(offset == 0)
+			fprintf(stream, "%s",info->sorted_symbols[mid].name);
+		    else
+			fprintf(stream, "%s+0x%x",
+			       info->sorted_symbols[mid].name,
+			       (unsigned int)offset);
+		}
+		return(TRUE);
+	    }
+	    if(info->sorted_symbols[mid].n_value > value){
+		high = mid - 1;
+		mid = (high + low) / 2;
+	    }
+	    else{
+		low = mid + 1;
+		mid = (high + low) / 2;
+	    }
+	}
+	if(offset == 0){
+	    if(reloc_found){
+		if(r_type == ARM_RELOC_HALF){
+		    if((r_length & 0x1) == 1)
+			fprintf(stream, ":upper16:0x%x", (unsigned int)value);
+		    else
+			fprintf(stream, ":lower16:0x%x", (unsigned int)value);
+		}
+		else
+		    fprintf(stream, "0x%x", (unsigned int)value);
+	    }
+	    else
+		fprintf(stream, "0x%x", (unsigned int)value);
+	}
+	else{
+	    if(reloc_found){
+		if(r_type == ARM_RELOC_HALF){
+		    if((r_length & 0x1) == 1)
+			fprintf(stream, ":upper16:0x%x+0x%x",
+				(unsigned int)value, (unsigned int)offset);
+		    else
+			fprintf(stream, ":lower16:0x%x+0x%x)",
+				(unsigned int)value, (unsigned int)offset);
+		}
+		else
+		    fprintf(stream, "0x%x+0x%x",
+			    (unsigned int)value, (unsigned int)offset);
+	    }
+	    else
+		fprintf(stream, "0x%x+0x%x",
+			(unsigned int)value, (unsigned int)offset);
+	}
+	return(TRUE);
 }
 
 /* Stubbed out for now */
@@ -4375,13 +5560,18 @@ struct load_command *load_commands,
 uint32_t ncmds,
 uint32_t sizeofcmds,
 cpu_subtype_t cpusubtype,
-enum bool verbose)
+enum bool verbose,
+LLVMDisasmContextRef arm_dc,
+LLVMDisasmContextRef thumb_dc,
+char *object_addr,
+uint32_t object_size)
 {
-    int bytes_consumed;
+    uint32_t bytes_consumed, pool_value;
 
 	dis_info.fprintf_func = (fprintf_ftype)fprintf;
   	dis_info.stream = stdout;
 	dis_info.print_address_func = print_address_func;
+	dis_info.print_immediate_func = print_immediate_func;
 
 	dis_info.mach = 0;
 	dis_info.bytes_per_line = 8;
@@ -4412,6 +5602,29 @@ enum bool verbose)
 	dis_info.left = left;
 	dis_info.addr = addr;
 	dis_info.sect_addr = sect_addr;
+
+	dis_info.arm_dc = arm_dc;
+	dis_info.thumb_dc = thumb_dc;
+
+	dis_info.object_addr = object_addr;
+	dis_info.object_size = object_size;
+
+	/*
+	 * If we have at least 4 bytes left, see if these 4 bytes are a pointer
+	 * in a literal pool by calling print_immediate_func() with the 4 byte
+	 * value and TRUE as the last argument to look for a section difference
+	 * relocation entry for these 4 bytes as a possible pointer at this
+	 * address.  If it does it will print a ".long a-b+offset" for these
+	 * 4 bytes.
+	 */
+	if(left >= 4){
+	    pool_value = sect[3] << 24 |
+			 sect[2] << 16 |
+			 sect[1] << 8 |
+			 sect[0];
+	    if(print_immediate_func(addr, pool_value, &dis_info, TRUE) == TRUE)
+		return(4);
+	}
 
 	bytes_consumed = print_insn_little_arm(addr, &dis_info);
 	printf("\n");

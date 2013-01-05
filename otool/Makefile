@@ -1,9 +1,10 @@
 RC_OS = macos
 export USE_APPLE_PB_SUPPORT = all
-OFLAG = -O
+OFLAG = -Os
+LTO = -DLTO_SUPPORT
 LEGACY = -D_MACH_I386_THREAD_STATUS_FPSTATE_LEGACY_FIELD_NAMES_ \
 	 -D_ARCHITECTURE_I386_FPU_FPSTATE_LEGACY_FIELD_NAMES_
-X_CFLAGS = -fno-builtin-round
+X_CFLAGS =
 
 ifeq "macos" "$(RC_OS)"
   STATIC := $(shell if [ "$(RC_RELEASE)" = "Beaker"    ] || \
@@ -31,11 +32,18 @@ ifeq "$(EFITOOLS)" "efitools"
 	EFI_SUPPORT = -DEFI_SUPPORT
 endif
 
-ifeq "mwccppc" "$(notdir $(CC))"
-  CFLAGS = $(OFLAG) -g -I$(SRCROOT)/../include -I$(SRCROOT) $(LEGACY)
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+  CXX = $(shell xcrun -find -sdk $(SDKROOT) c++)
+endif
+
+ifeq "clang" "$(notdir $(CC))"
+  CFLAGS = $(STATIC) $(OFLAG) $(LTO) -g -Wall -I$(SRCROOT)/../include \
+	   -I$(SRCROOT) $(LEGACY) $(EFI_SUPPORT) $(SDK)
 else
-  CFLAGS = $(STATIC) $(OFLAG) -g -Wall -I$(SRCROOT)/../include \
-	   -I$(SRCROOT) $(X_CFLAGS) $(LEGACY) $(EFI_SUPPORT)
+  CFLAGS = $(STATIC) $(OFLAG) $(LTO) -g -Wall -I$(SRCROOT)/../include \
+	   -I$(SRCROOT) $(X_CFLAGS) $(LEGACY) $(EFI_SUPPORT) $(SDK)
 endif
 
 USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "mwccppc" ] && \
@@ -100,20 +108,17 @@ endif
 HFILES = otool.h ofile_print.h m68k_disasm.h i860_disasm.h \
 	 sparc_disasm.h m88k_disasm.h i386_disasm.h ppc_disasm.h hppa_disasm.h \
 	 notify.h arm_disasm.h
-OBJS = $(CFILES:.c=.o) ofile.o vers.o
+OBJS = $(CFILES:.c=.o) ofile.o
 INSTALL_FILES = $(CFILES) $(HFILES) Makefile notes
 
 PRODUCT = otool
 all: $(OFILE_DIR) $(SYMROOT) $(PRODUCT).NEW
 
 $(PRODUCT).NEW:	$(OFILE_DIR) $(SYMROOT) $(OBJS)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r -o $(OBJROOT)/private.o \
+	$(CC) $(RC_CFLAGS) -nostdlib -r -o $(OBJROOT)/private.o \
 		$(OBJS) $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/$@ $(OBJROOT)/private.o \
+	$(CXX) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/$@ $(OBJROOT)/private.o \
 		$(LIBSTUFF) $(LIBS)
-
-vers.c:
-	vers_string -c $(VERS_STRING_FLAGS) $(PRODUCT) > $(OFILE_DIR)/$@
 
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
@@ -136,7 +141,7 @@ else
 endif
 
 clean: shlib_clean
-	-rm -f $(SYMROOT)/$(PRODUCT).NEW $(OFILE_DIR)/vers.c
+	-rm -f $(SYMROOT)/$(PRODUCT).NEW
 
 shlib_clean:
 	-cd $(OFILE_DIR); rm -f $(OBJS) private.o

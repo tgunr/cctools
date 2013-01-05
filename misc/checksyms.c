@@ -98,6 +98,10 @@ static enum bool seg_addr_table_specified = FALSE;
  */
 static char *seg_addr_table_filename = NULL;
 
+/* apple_version is created by the libstuff/Makefile */
+extern char apple_version[];
+char *version = apple_version;
+
 int
 main(
 int argc,
@@ -296,7 +300,8 @@ void *cookie)
 	cmd_flags = (struct cmd_flags *)cookie;
 
 	if(cmd_flags->check_dynamic_binary == TRUE)
-	    if((mh_flags & MH_DYLDLINK) == MH_DYLDLINK)
+	    if((mh_flags & MH_DYLDLINK) == MH_DYLDLINK &&
+		ofile->mh_filetype != MH_KEXT_BUNDLE)
 		check_dynamic_binary(ofile, arch_name, cmd_flags->detail,
 				     cmd_flags->verification);
 
@@ -385,7 +390,7 @@ void *cookie)
 	    else{
 		if(symbols64[i].n_un.n_strx == 0)
 		    syms[i].name = "";
-		else if(symbols64[i].n_un.n_strx < 0 ||
+		else if((int)symbols64[i].n_un.n_strx < 0 ||
 			(uint32_t)symbols64[i].n_un.n_strx > st->strsize)
 		    syms[i].name = "bad string index";
 		else
@@ -512,7 +517,7 @@ char *arch_name,
 enum bool detail,
 enum bool verification)
 {
-    uint32_t i, j, section_attributes, mh_flags, mh_ncmds;
+    uint32_t i, j, section_attributes, section_type, mh_flags, mh_ncmds;
     struct load_command *lc;
     struct segment_command *sg;
     struct segment_command_64 *sg64;
@@ -539,14 +544,17 @@ enum bool verification)
 					sizeof(struct segment_command));
 		for(j = 0; j < sg->nsects; j++){
 		    section_attributes = s->flags & SECTION_ATTRIBUTES;
+		    section_type = s->flags & SECTION_TYPE;
 		    if((sg->initprot & VM_PROT_WRITE) == 0 &&
 		       ((section_attributes & S_ATTR_EXT_RELOC) != 0 ||
 		        (section_attributes & S_ATTR_LOC_RELOC) != 0)){
-			/* read-only relocs are ok in i386 stub and 
+			/* read-only relocs are ok in i386 and arm stubs and 
 			    stub helper sections */
 			if((ofile->mh != NULL) && 
-			   (ofile->mh->cputype == CPU_TYPE_I386) &&
-			   ((strcmp(s->sectname,"__symbol_stub")==0) ||
+			   (ofile->mh->cputype == CPU_TYPE_I386 ||
+			    ofile->mh->cputype == CPU_TYPE_ARM) &&
+			   (section_type == S_SYMBOL_STUBS ||
+			    (strcmp(s->sectname,"__symbol_stub")==0) ||
 			    (strcmp(s->sectname,"__stub_helper")==0)))
 				continue;
 			if(detail == TRUE){
@@ -563,7 +571,7 @@ enum bool verification)
 		    s++;
 		}
 	    }
-	    else if(lc->cmd == LC_SEGMENT){
+	    else if(lc->cmd == LC_SEGMENT_64){
 		sg64 = (struct segment_command_64 *)lc;
 		s64 = (struct section_64 *)((char *)lc +
 					sizeof(struct segment_command_64));

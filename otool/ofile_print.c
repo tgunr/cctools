@@ -1,23 +1,31 @@
 /*
- * Copyright (c) 1999-2003 Apple Computer, Inc.  All Rights Reserved.
+ * Copyright © 2009 Apple Inc. All rights reserved.
  *
  * @APPLE_LICENSE_HEADER_START@
  * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
+ * 1.  Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer. 
+ * 2.  Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution. 
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission. 
  * 
+ * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  * @APPLE_LICENSE_HEADER_END@
  */
 /*
@@ -580,13 +588,19 @@ struct fat_arch *fat_arch)
 	    case CPU_SUBTYPE_ARM_V7:
 		printf("armv7\n");
 		break;
+	    case CPU_SUBTYPE_ARM_V7F:
+		printf("armv7f\n");
+		break;
+	    case CPU_SUBTYPE_ARM_V7K:
+		printf("armv7k\n");
+		break;
 	    default:
 		goto print_arch_unknown;
 		break;
 	    }
 	    break;
 	case CPU_TYPE_ANY:
-	    switch(fat_arch->cpusubtype & ~CPU_SUBTYPE_MASK){
+	    switch((int)(fat_arch->cpusubtype & ~CPU_SUBTYPE_MASK)){
 	    case CPU_SUBTYPE_MULTIPLE:
 		printf("any\n");
 		break;
@@ -610,7 +624,7 @@ print_arch_unknown:
 
 /*
  * print_cputype() helps print_fat_headers by printing the cputype and
- * cpusubtype (symbolicly for the one's it knows about).
+ * cpusubtype (symbolically for the one's it knows about).
  */
 static
 void
@@ -854,12 +868,20 @@ cpu_subtype_t cpusubtype)
 		printf("    cputype CPU_TYPE_ARM\n"
 		       "    cpusubtype CPU_SUBTYPE_ARM_V7\n");
 		break;
+	    case CPU_SUBTYPE_ARM_V7F:
+		printf("    cputype CPU_TYPE_ARM\n"
+		       "    cpusubtype CPU_SUBTYPE_ARM_V7F\n");
+		break;
+	    case CPU_SUBTYPE_ARM_V7K:
+		printf("    cputype CPU_TYPE_ARM\n"
+		       "    cpusubtype CPU_SUBTYPE_ARM_V7K\n");
+		break;
 	    default:
 		goto print_arch_unknown;
 	    }
 	    break;
 	case CPU_TYPE_ANY:
-	    switch(cpusubtype & ~CPU_SUBTYPE_MASK){
+	    switch((int)(cpusubtype & ~CPU_SUBTYPE_MASK)){
 	    case CPU_SUBTYPE_MULTIPLE:
 		printf("    cputype CPU_TYPE_ANY\n"
 		       "    cpusubtype CPU_SUBTYPE_MULTIPLE\n");
@@ -895,7 +917,9 @@ print_ar_hdr(
 struct ar_hdr *ar_hdr,
 char *member_name,
 uint32_t member_name_size,
-enum bool verbose)
+uint32_t member_offset,
+enum bool verbose,
+enum bool print_offset)
 {
     int32_t i;
     uint32_t j, mode;
@@ -933,6 +957,8 @@ enum bool verbose)
 	    size_buf[i] = '\0';
 	size_buf[sizeof(ar_hdr->ar_size)] = '\0';
 
+	if(print_offset == TRUE)
+	    printf("%u\t", member_offset);
 
 	if(verbose == TRUE){
 	    mode = strtoul(mode_buf, &endp, 8);
@@ -1067,12 +1093,13 @@ uint32_t toc_size,
 enum byte_sex toc_byte_sex,
 char *library_name,
 char *library_addr,
-uint32_t library_size,
+uint64_t library_size,
 char *arch_name,
 enum bool verbose)
 {
     enum byte_sex host_byte_sex;
-    uint32_t ran_size, nranlibs, str_size, i, toc_offset, member_name_size;
+    uint32_t ran_size, nranlibs, str_size, i, member_name_size;
+    uint64_t toc_offset;
     struct ranlib *ranlibs;
     char *strings, *member_name;
     struct ar_hdr *ar_hdr;
@@ -1544,6 +1571,12 @@ NS32:
 		case CPU_SUBTYPE_ARM_V7:
 		    printf("         V7");
 		    break;
+		case CPU_SUBTYPE_ARM_V7F:
+		    printf("        V7F");
+		    break;
+		case CPU_SUBTYPE_ARM_V7K:
+		    printf("        V7K");
+		    break;
 		default:
 		    printf(" %10d", cpusubtype & ~CPU_SUBTYPE_MASK);
 		    break;
@@ -1684,6 +1717,10 @@ NS32:
 		printf(" NO_REEXPORTED_DYLIBS");
 		f &= ~MH_NO_REEXPORTED_DYLIBS;
 	    }
+	    if(f & MH_NO_HEAP_EXECUTION){
+		printf(" MH_NO_HEAP_EXECUTION");
+		f &= ~MH_NO_HEAP_EXECUTION;
+	    }
 	    if(f != 0 || flags == 0)
 		printf(" 0x%08x", (unsigned int)f);
 	    printf("\n");
@@ -1743,8 +1780,11 @@ enum bool very_verbose)
     struct linkedit_data_command ld;
     struct rpath_command rpath;
     struct encryption_info_command encrypt;
-     struct dyld_info_command dyld_info;
-   uint64_t big_load_end;
+    struct dyld_info_command dyld_info;
+    struct version_min_command vd;
+    struct entry_point_command ep;
+    struct source_version_command sv;
+    uint64_t big_load_end;
 
 	host_byte_sex = get_host_byte_sex();
 	swapped = host_byte_sex != load_commands_byte_sex;
@@ -1887,6 +1927,7 @@ enum bool very_verbose)
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
 	    case LC_REEXPORT_DYLIB:
+	    case LC_LOAD_UPWARD_DYLIB:
 	    case LC_LAZY_LOAD_DYLIB:
 		memset((char *)&dl, '\0', sizeof(struct dylib_command));
 		size = left < sizeof(struct dylib_command) ?
@@ -1950,6 +1991,7 @@ enum bool very_verbose)
 
 	    case LC_ID_DYLINKER:
 	    case LC_LOAD_DYLINKER:
+	    case LC_DYLD_ENVIRONMENT:
 		memset((char *)&dyld, '\0', sizeof(struct dylinker_command));
 		size = left < sizeof(struct dylinker_command) ?
 		       left : sizeof(struct dylinker_command);
@@ -2068,6 +2110,9 @@ enum bool very_verbose)
 
 	    case LC_CODE_SIGNATURE:
 	    case LC_SEGMENT_SPLIT_INFO:
+	    case LC_FUNCTION_STARTS:
+	    case LC_DATA_IN_CODE:
+	    case LC_DYLIB_CODE_SIGN_DRS:
 		memset((char *)&ld, '\0', sizeof(struct linkedit_data_command));
 		size = left < sizeof(struct linkedit_data_command) ?
 		       left : sizeof(struct linkedit_data_command);
@@ -2108,6 +2153,37 @@ enum bool very_verbose)
 		if(swapped)
 		    swap_dyld_info_command(&dyld_info, host_byte_sex);
 		print_dyld_info_info_command(&dyld_info, object_size);
+		break;
+
+	    case LC_VERSION_MIN_MACOSX:
+	    case LC_VERSION_MIN_IPHONEOS:
+		memset((char *)&vd, '\0', sizeof(struct version_min_command));
+		size = left < sizeof(struct version_min_command) ?
+		       left : sizeof(struct version_min_command);
+		memcpy((char *)&vd, (char *)lc, size);
+		if(swapped)
+		    swap_version_min_command(&vd, host_byte_sex);
+		print_version_min_command(&vd);
+		break;
+
+	    case LC_SOURCE_VERSION:
+		memset((char *)&sv, '\0',sizeof(struct source_version_command));
+		size = left < sizeof(struct source_version_command) ?
+		       left : sizeof(struct source_version_command);
+		memcpy((char *)&sv, (char *)lc, size);
+		if(swapped)
+		    swap_source_version_command(&sv, host_byte_sex);
+		print_source_version_command(&sv);
+		break;
+
+	    case LC_MAIN:
+		memset((char *)&ep, '\0', sizeof(struct entry_point_command));
+		size = left < sizeof(struct entry_point_command) ?
+		       left : sizeof(struct entry_point_command);
+		memcpy((char *)&ep, (char *)lc, size);
+		if(swapped)
+		    swap_entry_point_command(&ep, host_byte_sex);
+		print_entry_point_command(&ep);
 		break;
 
 	    default:
@@ -2207,6 +2283,7 @@ enum bool verbose)
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
 	    case LC_REEXPORT_DYLIB:
+	    case LC_LOAD_UPWARD_DYLIB:
 	    case LC_LAZY_LOAD_DYLIB:
 		if(just_id == TRUE)
 		    break;
@@ -2244,11 +2321,13 @@ enum bool verbose)
 		    else if(l.cmd == LC_LOAD_DYLIB)
 			printf("LC_LOAD_DYLIB ");
 		    else if(l.cmd == LC_LOAD_WEAK_DYLIB)
-			printf("LC_REEXPORT_DYLIB ");
+			printf("LC_LOAD_WEAK_DYLIB ");
 		    else if(l.cmd == LC_LAZY_LOAD_DYLIB)
 			printf("LC_LAZY_LOAD_DYLIB ");
 		    else if(l.cmd == LC_REEXPORT_DYLIB)
-			printf("LC_LOAD_WEAK_DYLIB ");
+			printf("LC_REEXPORT_DYLIB ");
+		    else if(l.cmd == LC_LOAD_UPWARD_DYLIB)
+			printf("LC_LOAD_UPWARD_DYLIB ");
 		    else
 			printf("LC_??? ");
 		    printf("command %u\n", i);
@@ -2494,6 +2573,16 @@ enum bool verbose)
 		printf(" S_DTRACE_DOF\n");
 	    else if(section_type == S_LAZY_DYLIB_SYMBOL_POINTERS)
 		printf(" S_LAZY_DYLIB_SYMBOL_POINTERS\n");
+	    else if(section_type == S_THREAD_LOCAL_REGULAR)
+		printf(" S_THREAD_LOCAL_REGULAR\n");
+	    else if(section_type == S_THREAD_LOCAL_ZEROFILL)
+		printf(" S_THREAD_LOCAL_ZEROFILL\n");
+	    else if(section_type == S_THREAD_LOCAL_VARIABLES)
+		printf(" S_THREAD_LOCAL_VARIABLES\n");
+	    else if(section_type == S_THREAD_LOCAL_VARIABLE_POINTERS)
+		printf(" S_THREAD_LOCAL_VARIABLE_POINTERS\n");
+	    else if(section_type == S_THREAD_LOCAL_INIT_FUNCTION_POINTERS)
+		printf(" S_THREAD_LOCAL_INIT_FUNCTION_POINTERS\n");
 	    else
 		printf(" 0x%08x\n", (unsigned int)section_type);
 
@@ -2529,7 +2618,8 @@ enum bool verbose)
 	if(section_type == S_SYMBOL_STUBS ||
 	   section_type == S_LAZY_SYMBOL_POINTERS ||
 	   section_type == S_LAZY_DYLIB_SYMBOL_POINTERS ||
-	   section_type == S_NON_LAZY_SYMBOL_POINTERS)
+	   section_type == S_NON_LAZY_SYMBOL_POINTERS ||
+	   section_type == S_THREAD_LOCAL_VARIABLE_POINTERS)
 	    printf(" (index into indirect symbol table)\n");
 	else
 	    printf("\n");
@@ -2798,9 +2888,9 @@ struct load_command *lc)
 }
 
 /*
- * print an LC_ID_DYLIB, LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, LC_REEXPORT_DYLIB or
- * LC_LAZY_LOAD_DYLIB command.  The dylib_command structure specified must be
- * aligned correctly and in the host byte sex.
+ * print an LC_ID_DYLIB, LC_LOAD_DYLIB, LC_LOAD_WEAK_DYLIB, LC_REEXPORT_DYLIB,
+ * LC_LAZY_LOAD_DYLIB, or LC_LOAD_UPWARD_DYLIB command.  The dylib_command
+ * structure specified must be aligned correctly and in the host byte sex.
  */
 void
 print_dylib_command(
@@ -2820,6 +2910,8 @@ struct load_command *lc)
 	    printf("          cmd LC_REEXPORT_DYLIB\n");
 	else if(dl->cmd == LC_LAZY_LOAD_DYLIB)
 	    printf("          cmd LC_LAZY_LOAD_DYLIB\n");
+	else if(dl->cmd == LC_LOAD_UPWARD_DYLIB)
+	    printf("          cmd LC_LOAD_UPWARD_DYLIB\n");
 	else
 	    printf("          cmd %u (unknown)\n", dl->cmd);
 	printf("      cmdsize %u", dl->cmdsize);
@@ -2839,11 +2931,19 @@ struct load_command *lc)
 	printf("   time stamp %u ", dl->dylib.timestamp);
 	t = dl->dylib.timestamp;
 	printf("%s", ctime(&t));
-	printf("      current version %u.%u.%u\n",
+	printf("      current version ");
+	if(dl->dylib.current_version == 0xffffffff)
+	    printf("n/a\n");
+	else
+	    printf("%u.%u.%u\n",
 	       dl->dylib.current_version >> 16,
 	       (dl->dylib.current_version >> 8) & 0xff,
 	       dl->dylib.current_version & 0xff);
-	printf("compatibility version %u.%u.%u\n",
+	printf("compatibility version ");
+	if(dl->dylib.compatibility_version == 0xffffffff)
+	    printf("n/a\n");
+	else
+	    printf("%u.%u.%u\n",
 	       dl->dylib.compatibility_version >> 16,
 	       (dl->dylib.compatibility_version >> 8) & 0xff,
 	       dl->dylib.compatibility_version & 0xff);
@@ -3021,8 +3121,9 @@ enum bool verbose)
 }
 
 /*
- * print an LC_ID_DYLINKER or LC_LOAD_DYLINKER command.  The dylinker_command
- * structure specified must be aligned correctly and in the host byte sex.
+ * print an LC_ID_DYLINKER, LC_LOAD_DYLINKER or LC_DYLD_ENVIRONMENT command.
+ * The dylinker_command structure specified must be aligned correctly and in the
+ * host byte sex.
  */
 void
 print_dylinker_command(
@@ -3033,8 +3134,12 @@ struct load_command *lc)
 
 	if(dyld->cmd == LC_ID_DYLINKER)
 	    printf("          cmd LC_ID_DYLINKER\n");
-	else
+	else if(dyld->cmd == LC_LOAD_DYLINKER)
 	    printf("          cmd LC_LOAD_DYLINKER\n");
+	else if(dyld->cmd == LC_DYLD_ENVIRONMENT)
+	    printf("          cmd LC_DYLD_ENVIRONMENT\n");
+	else
+	    printf("          cmd ?(%u)\n", dyld->cmd);
 	printf("      cmdsize %u", dyld->cmdsize);
 	if(dyld->cmdsize < sizeof(struct dylinker_command))
 	    printf(" Incorrect size\n");
@@ -3187,13 +3292,13 @@ struct uuid_command *uuid)
 	    printf(" Incorrect size\n");
 	else
 	    printf("\n");
-	printf("   uuid 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x"
-	       "\n", (unsigned int)uuid->uuid[0], (unsigned int)uuid->uuid[1],
+	printf("    uuid %02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-"
+	       "%02X%02X%02X%02X%02X%02X\n",
+	       (unsigned int)uuid->uuid[0], (unsigned int)uuid->uuid[1],
 	       (unsigned int)uuid->uuid[2],  (unsigned int)uuid->uuid[3],
 	       (unsigned int)uuid->uuid[4],  (unsigned int)uuid->uuid[5],
-	       (unsigned int)uuid->uuid[6],  (unsigned int)uuid->uuid[7]);
-	printf("        0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x"
-	       "\n", (unsigned int)uuid->uuid[8],  (unsigned int)uuid->uuid[9],
+	       (unsigned int)uuid->uuid[6],  (unsigned int)uuid->uuid[7],
+	       (unsigned int)uuid->uuid[8],  (unsigned int)uuid->uuid[9],
 	       (unsigned int)uuid->uuid[10], (unsigned int)uuid->uuid[11],
 	       (unsigned int)uuid->uuid[12], (unsigned int)uuid->uuid[13],
 	       (unsigned int)uuid->uuid[14], (unsigned int)uuid->uuid[15]);
@@ -3214,6 +3319,12 @@ uint32_t object_size)
 	    printf("      cmd LC_CODE_SIGNATURE\n");
 	else if(ld->cmd == LC_SEGMENT_SPLIT_INFO)
 	    printf("      cmd LC_SEGMENT_SPLIT_INFO\n");
+        else if(ld->cmd == LC_FUNCTION_STARTS)
+	    printf("      cmd LC_FUNCTION_STARTS\n");
+        else if(ld->cmd == LC_DATA_IN_CODE)
+	    printf("      cmd LC_DATA_IN_CODE\n");
+        else if(ld->cmd == LC_DYLIB_CODE_SIGN_DRS)
+	    printf("      cmd LC_DYLIB_CODE_SIGN_DRS\n");
 	else
 	    printf("      cmd %u (?)\n", ld->cmd);
 	printf("  cmdsize %u", ld->cmdsize);
@@ -3221,7 +3332,7 @@ uint32_t object_size)
 	    printf(" Incorrect size\n");
 	else
 	    printf("\n");
-	printf(" dataoff  %u", ld->dataoff);
+	printf("  dataoff %u", ld->dataoff);
 	if(ld->dataoff > object_size)
 	    printf(" (past end of file)\n");
 	else
@@ -3233,6 +3344,98 @@ uint32_t object_size)
 	    printf(" (past end of file)\n");
 	else
 	    printf("\n");
+}
+
+/*
+ * print a version_min_command.  The version_min_command structure
+ * specified must be aligned correctly and in the host byte sex.
+ */
+void
+print_version_min_command(
+struct version_min_command *vd)
+{
+	if(vd->cmd == LC_VERSION_MIN_MACOSX)
+	    printf("      cmd LC_VERSION_MIN_MACOSX\n");
+	else if(vd->cmd == LC_VERSION_MIN_IPHONEOS)
+	    printf("      cmd LC_VERSION_MIN_IPHONEOS\n");
+	else
+	    printf("      cmd %u (?)\n", vd->cmd);
+	printf("  cmdsize %u", vd->cmdsize);
+	if(vd->cmdsize != sizeof(struct version_min_command))
+	    printf(" Incorrect size\n");
+	else
+	    printf("\n");
+	if((vd->version & 0xff) == 0)
+	    printf("  version %u.%u\n",
+	       vd->version >> 16,
+	       (vd->version >> 8) & 0xff);
+	else
+	    printf("  version %u.%u.%u\n",
+	       vd->version >> 16,
+	       (vd->version >> 8) & 0xff,
+	       vd->version & 0xff);
+	if(vd->sdk == 0)
+	    printf("      sdk n/a\n");
+	else{
+	    if((vd->sdk & 0xff) == 0)
+		printf("      sdk %u.%u\n",
+		   vd->sdk >> 16,
+		   (vd->sdk >> 8) & 0xff);
+	    else
+		printf("      sdk %u.%u.%u\n",
+		   vd->sdk >> 16,
+		   (vd->sdk >> 8) & 0xff,
+		   vd->sdk & 0xff);
+	}
+}
+
+/*
+ * print a source_version_command.  The source_version_command structure
+ * specified must be aligned correctly and in the host byte sex.
+ */
+void
+print_source_version_command(
+struct source_version_command *sv)
+{
+    uint64_t a, b, c, d, e;
+
+	printf("      cmd LC_SOURCE_VERSION\n");
+	printf("  cmdsize %u", sv->cmdsize);
+	if(sv->cmdsize != sizeof(struct source_version_command))
+	    printf(" Incorrect size\n");
+	else
+	    printf("\n");
+	a = (sv->version >> 40) & 0xffffff;
+	b = (sv->version >> 30) & 0x3ff;
+	c = (sv->version >> 20) & 0x3ff;
+	d = (sv->version >> 10) & 0x3ff;
+	e = sv->version & 0x3ff;
+	if(e != 0)
+	    printf("  version %llu.%llu.%llu.%llu.%llu\n", a, b, c, d, e);
+	else if(d != 0)
+	    printf("  version %llu.%llu.%llu.%llu\n", a, b, c, d);
+	else if(c != 0)
+	    printf("  version %llu.%llu.%llu\n", a, b, c);
+	else
+	    printf("  version %llu.%llu\n", a, b);
+}
+
+/*
+ * print a entry_point_command.  The entry_point_command structure
+ * specified must be aligned correctly and in the host byte sex.
+ */
+void
+print_entry_point_command(
+struct entry_point_command *ep)
+{
+	printf("       cmd LC_MAIN\n");
+	printf("   cmdsize %u", ep->cmdsize);
+	if(ep->cmdsize < sizeof(struct entry_point_command))
+	    printf(" Incorrect size\n");
+	else
+	    printf("\n");
+	printf("  entryoff %llu\n", ep->entryoff);
+	printf(" stacksize %llu\n", ep->stacksize);
 }
 
 /*
@@ -3278,19 +3481,19 @@ uint32_t object_size)
 	    printf(" Incorrect size\n");
 	else
 	    printf("\n");
-	printf(" cryptoff  %u", ec->cryptoff);
+	printf("    cryptoff  %u", ec->cryptoff);
 	if(ec->cryptoff > object_size)
 	    printf(" (past end of file)\n");
 	else
 	    printf("\n");
-	printf(" cryptsize %u", ec->cryptsize);
+	printf("    cryptsize %u", ec->cryptsize);
 	big_size = ec->cryptsize;
 	big_size += ec->cryptoff;
 	if(big_size > object_size)
 	    printf(" (past end of file)\n");
 	else
 	    printf("\n");
-	printf(" cryptid   %u\n", ec->cryptid);
+	printf("    cryptid   %u\n", ec->cryptid);
 }
 
 /*
@@ -4466,9 +4669,9 @@ enum byte_sex thread_states_byte_sex)
 		        memcpy((char *)&cpu, begin, left);
 		        begin += left;
 		    }
-#ifdef x86_THREAD_STATE64
+#if defined(x86_THREAD_STATE64) && i386_THREAD_STATE != -1
 print_x86_thread_state32:
-#endif /* x86_THREAD_STATE64 */
+#endif
 		    if(swapped)
 			swap_i386_thread_state(&cpu, host_byte_sex);
 		    printf(
@@ -5384,7 +5587,7 @@ print_x86_debug_state64:
 	    }
 	}
 	else if(cputype == CPU_TYPE_ARM){
-	    struct arm_thread_state cpu;
+	    arm_thread_state_t cpu;
 	    while(begin < end){
 		if(end - begin > (ptrdiff_t)sizeof(uint32_t)){
 		    memcpy((char *)&flavor, begin, sizeof(uint32_t));
@@ -5416,14 +5619,14 @@ print_x86_debug_state64:
 			printf("      count %u (not ARM_THREAD_STATE_"
 			       "COUNT)\n", count);
 		    left = end - begin;
-		    if(left >= sizeof(struct arm_thread_state)){
+		    if(left >= sizeof(arm_thread_state_t)){
 		        memcpy((char *)&cpu, begin,
-			       sizeof(struct arm_thread_state));
-		        begin += sizeof(struct arm_thread_state);
+			       sizeof(arm_thread_state_t));
+		        begin += sizeof(arm_thread_state_t);
 		    }
 		    else{
 		        memset((char *)&cpu, '\0',
-			       sizeof(struct arm_thread_state));
+			       sizeof(arm_thread_state_t));
 		        memcpy((char *)&cpu, begin, left);
 		        begin += left;
 		    }
@@ -5433,11 +5636,12 @@ print_x86_debug_state64:
 		       "\t    r0  0x%08x r1     0x%08x r2  0x%08x r3  0x%08x\n"
 		       "\t    r4  0x%08x r5     0x%08x r6  0x%08x r7  0x%08x\n"
 		       "\t    r8  0x%08x r9     0x%08x r10 0x%08x r11 0x%08x\n"
-		       "\t    r12 0x%08x r13    0x%08x r14 0x%08x r15 0x%08x\n"
-		       "\t    r16 0x%08x\n",
-			cpu.r0, cpu.r1, cpu.r2, cpu.r3, cpu.r4, cpu.r5, cpu.r6,
-			cpu.r7, cpu.r8, cpu.r9, cpu.r10, cpu.r11, cpu.r12,
-			cpu.r13, cpu.r14, cpu.r15, cpu.r16);
+		       "\t    r12 0x%08x sp     0x%08x lr  0x%08x pc  0x%08x\n"
+		       "\t   cpsr 0x%08x\n",
+			cpu.__r[0], cpu.__r[1], cpu.__r[2], cpu.__r[3],
+			cpu.__r[4], cpu.__r[5], cpu.__r[6], cpu.__r[7],
+			cpu.__r[8], cpu.__r[9], cpu.__r[10], cpu.__r[11],
+			cpu.__r[12], cpu.__sp, cpu.__lr, cpu.__pc, cpu.__cpsr);
 		    break;
 		default:
 		    printf("     flavor %u (unknown)\n", flavor);
@@ -5797,7 +6001,7 @@ enum bool verbose)
     uint32_t j;
     struct relocation_info *r, reloc;
     struct scattered_relocation_info *sr;
-    enum bool previous_sectdiff, previous_ppc_jbsr, predicted;
+    enum bool previous_sectdiff, previous_ppc_jbsr, previous_arm_half,predicted;
     uint32_t sectdiff_r_type;
     uint32_t n_strx;
 
@@ -5805,6 +6009,7 @@ enum bool verbose)
 
 	previous_sectdiff = FALSE;
 	previous_ppc_jbsr = FALSE;
+	previous_arm_half = FALSE;
 	sectdiff_r_type = 0;
 	for(j = 0 ;
 	    j < nreloc &&
@@ -5819,7 +6024,8 @@ enum bool verbose)
 	    if(swapped)
 		swap_relocation_info(&reloc, 1, host_byte_sex);
 	    
-	    if((reloc.r_address & R_SCATTERED) != 0){
+	    if((reloc.r_address & R_SCATTERED) != 0 &&
+	       cputype != CPU_TYPE_X86_64){
 		sr = (struct scattered_relocation_info *)&reloc; 
 		if(verbose){
 		    if((cputype == CPU_TYPE_MC680x0 &&
@@ -5847,40 +6053,55 @@ enum bool verbose)
 			printf("True  ");
 		    else
 			printf("False ");
-		    switch(sr->r_length){
-		    case 0:
-			printf("byte   ");
-			break;
-		    case 1:
-			printf("word   ");
-			break;
-		    case 2:
-			printf("long   ");
-			break;
-		    case 3:
-			/*
-			 * The value of 3 for r_length for PowerPC is to encode
-			 * that a conditional branch using the Y-bit for static
-			 * branch prediction was predicted in the assembly
-			 * source.
-			 */
-			if((cputype == CPU_TYPE_POWERPC64 && 
-			    reloc.r_type == PPC_RELOC_VANILLA) ||
-			   cputype == CPU_TYPE_X86_64) {
-                                printf("quad   ");
-			}
-			else if(cputype == CPU_TYPE_POWERPC ||
-				cputype == CPU_TYPE_POWERPC64 || 
-				cputype == CPU_TYPE_VEO){
-			    printf("long   ");
-			    predicted = TRUE;
-			}
+		    if(cputype == CPU_TYPE_ARM && 
+		       (sr->r_type == ARM_RELOC_HALF ||
+			sr->r_type == ARM_RELOC_HALF_SECTDIFF ||
+			previous_arm_half == TRUE)){
+			if((sr->r_length & 0x1) == 0)
+			    printf("lo/");
 			else
+			    printf("hi/");
+			if((sr->r_length & 0x2) == 0)
+			    printf("arm ");
+			else
+			    printf("thm ");
+		    }
+		    else{
+			switch(sr->r_length){
+			case 0:
+			    printf("byte   ");
+			    break;
+			case 1:
+			    printf("word   ");
+			    break;
+			case 2:
+			    printf("long   ");
+			    break;
+			case 3:
+			    /*
+			     * The value of 3 for r_length for PowerPC is to
+			     * encode that a conditional branch using the Y-bit
+			     * for static branch prediction was predicted in
+			     * the assembly source.
+			     */
+			    if((cputype == CPU_TYPE_POWERPC64 && 
+				reloc.r_type == PPC_RELOC_VANILLA) ||
+			       cputype == CPU_TYPE_X86_64) {
+				    printf("quad   ");
+			    }
+			    else if(cputype == CPU_TYPE_POWERPC ||
+				    cputype == CPU_TYPE_POWERPC64 || 
+				    cputype == CPU_TYPE_VEO){
+				printf("long   ");
+				predicted = TRUE;
+			    }
+			    else
+				printf("?(%2d)  ", sr->r_length);
+			    break;
+			default:
 			    printf("?(%2d)  ", sr->r_length);
-			break;
-		    default:
-			printf("?(%2d)  ", sr->r_length);
-			break;
+			    break;
+			}
 		    }
 		    printf("n/a    ");
 		    print_r_type(cputype, sr->r_type, predicted);
@@ -5934,6 +6155,11 @@ enum bool verbose)
 			    printf(" other_half = 0x%04x ",
 				   (unsigned int)sr->r_address);
 		    }
+		    else if(cputype == CPU_TYPE_ARM &&
+			    sectdiff_r_type == ARM_RELOC_HALF_SECTDIFF){
+			    printf(" other_half = 0x%04x ",
+				   (unsigned int)sr->r_address);
+		    }
 		    if((cputype == CPU_TYPE_MC680x0 &&
 			(sr->r_type == GENERIC_RELOC_SECTDIFF ||
 			 sr->r_type == GENERIC_RELOC_LOCAL_SECTDIFF)) ||
@@ -5958,7 +6184,9 @@ enum bool verbose)
 			 sr->r_type == HPPA_RELOC_HI21_SECTDIFF ||
 			 sr->r_type == HPPA_RELOC_LO14_SECTDIFF)) ||
 		       (cputype == CPU_TYPE_ARM &&
-			 sr->r_type == ARM_RELOC_SECTDIFF) ||
+			(sr->r_type == ARM_RELOC_SECTDIFF ||
+			 sr->r_type == ARM_RELOC_LOCAL_SECTDIFF ||
+			 sr->r_type == ARM_RELOC_HALF_SECTDIFF)) ||
 		       (cputype == CPU_TYPE_SPARC &&
 			(sr->r_type == SPARC_RELOC_SECTDIFF ||
 			 sr->r_type == SPARC_RELOC_HI22_SECTDIFF ||
@@ -5975,6 +6203,12 @@ enum bool verbose)
 			previous_ppc_jbsr = TRUE;
 		    else
 			previous_ppc_jbsr = FALSE;
+		    if(cputype == CPU_TYPE_ARM &&
+		       (sr->r_type == ARM_RELOC_HALF ||
+		        sr->r_type == ARM_RELOC_HALF_SECTDIFF))
+			previous_arm_half = TRUE;
+		    else
+			previous_arm_half = FALSE;
 		    printf("\n");
 		}
 		else{
@@ -6007,40 +6241,55 @@ enum bool verbose)
 			printf("True  ");
 		    else
 			printf("False ");
-		    switch(reloc.r_length){
-		    case 0:
-			printf("byte   ");
-			break;
-		    case 1:
-			printf("word   ");
-			break;
-		    case 2:
-			printf("long   ");
-			break;
-		    case 3:
-			/*
-			 * The value of 3 for r_length for PowerPC is to encode
-			 * that a conditional branch using the Y-bit for static
-			 * branch prediction was predicted in the assembly
-			 * source.
-			 */
-			if((cputype == CPU_TYPE_POWERPC64 && 
-			    reloc.r_type == PPC_RELOC_VANILLA) ||
-			   cputype == CPU_TYPE_X86_64) {
-                                printf("quad   ");
-			}
-			else if(cputype == CPU_TYPE_POWERPC ||
-				cputype == CPU_TYPE_POWERPC64 ||
-				cputype == CPU_TYPE_VEO){
-			    printf("long   ");
-			    predicted = TRUE;
-			}
+		    if(cputype == CPU_TYPE_ARM && 
+		       (reloc.r_type == ARM_RELOC_HALF ||
+			reloc.r_type == ARM_RELOC_HALF_SECTDIFF ||
+			previous_arm_half == TRUE)){
+			if((reloc.r_length & 0x1) == 0)
+			    printf("lo/");
 			else
+			    printf("hi/");
+			if((reloc.r_length & 0x2) == 0)
+			    printf("arm ");
+			else
+			    printf("thm ");
+		    }
+		    else{
+			switch(reloc.r_length){
+			case 0:
+			    printf("byte   ");
+			    break;
+			case 1:
+			    printf("word   ");
+			    break;
+			case 2:
+			    printf("long   ");
+			    break;
+			case 3:
+			    /*
+			     * The value of 3 for r_length for PowerPC is to
+			     * encode that a conditional branch using the Y-bit
+			     * for static branch prediction was predicted in
+			     * the assembly source.
+			     */
+			    if((cputype == CPU_TYPE_POWERPC64 && 
+				reloc.r_type == PPC_RELOC_VANILLA) ||
+			       cputype == CPU_TYPE_X86_64) {
+				    printf("quad   ");
+			    }
+			    else if(cputype == CPU_TYPE_POWERPC ||
+				    cputype == CPU_TYPE_POWERPC64 ||
+				    cputype == CPU_TYPE_VEO){
+				printf("long   ");
+				predicted = TRUE;
+			    }
+			    else
+				printf("?(%2d)  ", reloc.r_length);
+			    break;
+			default:
 			    printf("?(%2d)  ", reloc.r_length);
-			break;
-		    default:
-			printf("?(%2d)  ", reloc.r_length);
-			break;
+			    break;
+			}
 		    }
 		    if(reloc.r_extern){
 			printf("True   ");
@@ -6075,8 +6324,6 @@ enum bool verbose)
 			}
 			else if((cputype == CPU_TYPE_HPPA &&
 				 reloc.r_type == HPPA_RELOC_PAIR) ||
-				(cputype == CPU_TYPE_ARM &&
-				 reloc.r_type == ARM_RELOC_PAIR) ||
 				(cputype == CPU_TYPE_SPARC &&
 				 reloc.r_type == SPARC_RELOC_PAIR)){
 			    printf(" other_part = 0x%06x\n",
@@ -6093,6 +6340,10 @@ enum bool verbose)
 				printf("other_part = 0x%08x\n",
 				       (unsigned int)reloc.r_address);
 			}
+			else if(cputype == CPU_TYPE_ARM &&
+				reloc.r_type == ARM_RELOC_PAIR)
+			    printf("other_half = 0x%04x\n",
+				   (unsigned int)reloc.r_address);
 			else{
 			    printf("%d ", reloc.r_symbolnum);
 			    if(reloc.r_symbolnum > nsects + 1)
@@ -6114,6 +6365,12 @@ enum bool verbose)
 			previous_ppc_jbsr = TRUE;
 		    else
 			previous_ppc_jbsr = FALSE;
+		    if(cputype == CPU_TYPE_ARM &&
+		       (reloc.r_type == ARM_RELOC_HALF ||
+		        reloc.r_type == ARM_RELOC_HALF_SECTDIFF))
+			previous_arm_half = TRUE;
+		    else
+			previous_arm_half = FALSE;
 		}
 		else{
 		    printf("%08x %1d     %-2d     %1d      %-7d 0"
@@ -6127,7 +6384,7 @@ enum bool verbose)
 
 
 static char *generic_r_types[] = {
-    "VANILLA ", "PAIR    ", "SECTDIF ", "PBLAPTR ", "LOCSDIF ", "  5 (?) ",
+    "VANILLA ", "PAIR    ", "SECTDIF ", "PBLAPTR ", "LOCSDIF ", "TLV     ",
     "  6 (?) ", "  7 (?) ", "  8 (?) ", "  9 (?) ", " 10 (?) ", " 11 (?) ",
     " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
 };
@@ -6148,7 +6405,7 @@ static char *ppc_r_types[] = {
 };
 static char *x86_64_r_types[] = {
     "UNSIGND ", "SIGNED  ", "BRANCH  ", "GOT_LD  ", "GOT     ", "SUB     ",
-    "SIGNED1 ", "SIGNED2 ", "SIGNED4 ", "  9 (?) ", " 10 (?) ", " 11 (?) ",
+    "SIGNED1 ", "SIGNED2 ", "SIGNED4 ", "TLV     ", " 10 (?) ", " 11 (?) ",
     " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
 };
 static char *hppa_r_types[] = {
@@ -6165,7 +6422,7 @@ static char *sparc_r_types[] = {
 
 static char *arm_r_types[] = {
 	"VANILLA ", "PAIR    ", "SECTDIFF", "LOCSDIF ", "PBLAPTR ",
-	"BR24    ", "T_BR22  ", "T_BR32  ", " 8 (?)  ", " 9 (?)  ", 
+	"BR24    ", "T_BR22  ", "T_BR32  ", "HALF    ", "HALFDIF ", 
 	" 10 (?) ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
 };
 
@@ -6699,7 +6956,8 @@ enum bool verbose)
 	    }
 	    else if(section_type == S_LAZY_SYMBOL_POINTERS ||
 	            section_type == S_NON_LAZY_SYMBOL_POINTERS ||
-	            section_type == S_LAZY_DYLIB_SYMBOL_POINTERS){
+	            section_type == S_LAZY_DYLIB_SYMBOL_POINTERS ||
+	   	    section_type == S_THREAD_LOCAL_VARIABLE_POINTERS){
 		if(cputype & CPU_ARCH_ABI64)
 		    stride = 8;
 		else
@@ -6848,6 +7106,7 @@ enum bool verbose)
 	    case LC_LOAD_DYLIB:
 	    case LC_LOAD_WEAK_DYLIB:
 	    case LC_REEXPORT_DYLIB:
+	    case LC_LOAD_UPWARD_DYLIB:
 	    case LC_LAZY_LOAD_DYLIB:
 		memset((char *)&dl, '\0', sizeof(struct dylib_command));
 		size = left < sizeof(struct dylib_command) ?
@@ -6921,16 +7180,21 @@ enum bool verbose)
 
 void
 print_cstring_section(
+cpu_type_t cputype,
 char *sect,
 uint32_t sect_size,
-uint32_t sect_addr,
+uint64_t sect_addr,
 enum bool print_addresses)
 {
     uint32_t i;
 
 	for(i = 0; i < sect_size ; i++){
-	    if(print_addresses == TRUE)
-		printf("%08x  ", (unsigned int)(sect_addr + i));
+	    if(print_addresses == TRUE){
+	        if(cputype & CPU_ARCH_ABI64)
+		    printf("0x%016llx  ", sect_addr + i);
+		else
+		    printf("%08x  ", (unsigned int)(sect_addr + i));
+	    }
 
 	    for( ; i < sect_size && sect[i] != '\0'; i++)
 		print_cstring_char(sect[i]);
@@ -7134,6 +7398,7 @@ uint32_t l3)
 
 void
 print_literal_pointer_section(
+cpu_type_t cputype,
 struct load_command *load_commands,
 uint32_t ncmds,
 uint32_t sizeofcmds,
@@ -7142,7 +7407,7 @@ char *object_addr,
 uint32_t object_size,
 char *sect,
 uint32_t sect_size,
-uint32_t sect_addr,
+uint64_t sect_addr,
 struct nlist *symbols,
 struct nlist_64 *symbols64,
 uint32_t nsymbols,
@@ -7154,7 +7419,8 @@ enum bool print_addresses)
 {
     enum byte_sex host_byte_sex;
     enum bool swapped, found;
-    uint32_t i, j, k, l, l0, l1, l2, l3, left, size;
+    uint32_t i, j, k, li, l0, l1, l2, l3, left, size, lp_size;
+    uint64_t lp;
     struct load_command lcmd, *lc;
     struct segment_command sg;
     struct section s;
@@ -7336,13 +7602,30 @@ enum bool print_addresses)
 	}
 
 	/* loop through the literal pointer section and print the pointers */
-	for(i = 0; i < sect_size ; i += sizeof(int32_t)){
-	    if(print_addresses == TRUE)
-		printf("%08x  ", (unsigned int)(sect_addr + i));
-	    l = (int32_t)*((int32_t *)(sect + i));
-	    memcpy((char *)&l, sect + i, sizeof(uint32_t));
-	    if(swapped)
-		l = SWAP_INT(l);
+	if(cputype & CPU_ARCH_ABI64)
+	    lp_size = 8;
+	else
+	    lp_size = 4;
+	for(i = 0; i < sect_size ; i += lp_size){
+	    if(print_addresses == TRUE){
+	        if(cputype & CPU_ARCH_ABI64)
+		    printf("0x%016llx  ", sect_addr + i);
+		else
+		    printf("%08x  ", (unsigned int)(sect_addr + i));
+	    }
+	    if(cputype & CPU_ARCH_ABI64){
+		lp = (uint64_t)*((uint64_t *)(sect + i));
+		memcpy((char *)&lp, sect + i, sizeof(uint64_t));
+		if(swapped)
+		    lp = SWAP_LONG_LONG(lp);
+	    }
+	    else{
+		li = (int32_t)*((int32_t *)(sect + i));
+		memcpy((char *)&li, sect + i, sizeof(uint32_t));
+		if(swapped)
+		    li = SWAP_INT(li);
+		lp = li;
+	    }
 	    /*
 	     * If there is an external relocation entry for this pointer then
 	     * print the symbol and any offset.
@@ -7358,9 +7641,8 @@ enum bool print_addresses)
 		    else
 			n_strx = symbols64[reloc->r_symbolnum].n_un.n_strx;
 		    if(n_strx < strings_size){
-			if(l != 0)
-			    printf("%s+0x%x\n", strings + n_strx,
-				    (unsigned int)l);
+			if(lp != 0)
+			    printf("%s+0x%llx\n", strings + n_strx, lp);
 			else
 			    printf("%s\n", strings + n_strx);
 		    }
@@ -7376,14 +7658,14 @@ enum bool print_addresses)
 	    }
 	    found = FALSE;
 	    for(j = 0; j < nliteral_sections; j++){
-		if(l >= literal_sections[j].addr &&
-		   l < literal_sections[j].addr +
-		       literal_sections[j].size){
+		if(lp >= literal_sections[j].addr &&
+		   lp < literal_sections[j].addr +
+		        literal_sections[j].size){
 		    printf("%.16s:%.16s:", literal_sections[j].segname,
 			   literal_sections[j].sectname);
 		    switch(literal_sections[j].flags){
 		    case S_CSTRING_LITERALS:
-			for(k = l - literal_sections[j].addr;
+			for(k = lp - literal_sections[j].addr;
 			    k < literal_sections[j].size &&
 					literal_sections[j].contents[k] != '\0';
 			    k++)
@@ -7393,11 +7675,11 @@ enum bool print_addresses)
 		    case S_4BYTE_LITERALS:
 			memcpy((char *)&f,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr),
+					lp - literal_sections[j].addr),
 				sizeof(float));
 			memcpy((char *)&l0,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr),
+					lp - literal_sections[j].addr),
 				sizeof(uint32_t));
 			if(swapped){
 			    d = SWAP_DOUBLE(d);
@@ -7408,15 +7690,15 @@ enum bool print_addresses)
 		    case S_8BYTE_LITERALS:
 			memcpy((char *)&d,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr),
+					lp - literal_sections[j].addr),
 				sizeof(double));
 			memcpy((char *)&l0,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr),
+					lp - literal_sections[j].addr),
 				sizeof(uint32_t));
 			memcpy((char *)&l1,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr +
+					lp - literal_sections[j].addr +
 					sizeof(uint32_t)),
 			       sizeof(uint32_t));
 			if(swapped){
@@ -7429,21 +7711,21 @@ enum bool print_addresses)
 		    case S_16BYTE_LITERALS:
 			memcpy((char *)&l0,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr),
+					lp - literal_sections[j].addr),
 				sizeof(uint32_t));
 			memcpy((char *)&l1,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr +
+					lp - literal_sections[j].addr +
 					sizeof(uint32_t)),
 			       sizeof(uint32_t));
 			memcpy((char *)&l2,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr +
+					lp - literal_sections[j].addr +
 					2 * sizeof(uint32_t)),
 			       sizeof(uint32_t));
 			memcpy((char *)&l3,
 			       (char *)(literal_sections[j].contents +
-					l - literal_sections[j].addr +
+					lp - literal_sections[j].addr +
 					3 * sizeof(uint32_t)),
 			       sizeof(uint32_t));
 			if(swapped){
@@ -7460,7 +7742,7 @@ enum bool print_addresses)
 		}
 	    }
 	    if(found == FALSE)
-		printf("0x%x (not in a literal section)\n", (unsigned int)l);
+		printf("0x%llx (not in a literal section)\n", lp);
 	}
 
 	if(literal_sections != NULL)
@@ -7836,6 +8118,7 @@ const uint32_t strings_size)
 		    if((section_type == S_NON_LAZY_SYMBOL_POINTERS ||
 		        section_type == S_LAZY_SYMBOL_POINTERS ||
 		        section_type == S_LAZY_DYLIB_SYMBOL_POINTERS ||
+		        section_type == S_THREAD_LOCAL_VARIABLE_POINTERS ||
 		        section_type == S_SYMBOL_STUBS) &&
 		        value >= s.addr && value < s.addr + s.size){
 			if(section_type == S_SYMBOL_STUBS)
@@ -7870,6 +8153,7 @@ const uint32_t strings_size)
 		    if((section_type == S_NON_LAZY_SYMBOL_POINTERS ||
 		        section_type == S_LAZY_SYMBOL_POINTERS ||
 		        section_type == S_LAZY_DYLIB_SYMBOL_POINTERS ||
+	   		section_type == S_THREAD_LOCAL_VARIABLE_POINTERS ||
 		        section_type == S_SYMBOL_STUBS) &&
 		        value >= s64.addr && value < s64.addr + s64.size){
 			if(section_type == S_SYMBOL_STUBS)

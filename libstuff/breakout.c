@@ -28,7 +28,7 @@
 #include "stuff/breakout.h"
 #include "stuff/allocate.h"
 #include "stuff/errors.h"
-#include "stuff/round.h"
+#include "stuff/rnd.h"
 #include "stuff/crc32.h"
 
 static void breakout_internal(
@@ -78,7 +78,7 @@ enum bool calculate_input_prebind_cksum)
 	 * Rely on the ofile_*() routines to do all the checking and only
 	 * return valid ofiles files broken out.
 	 */
-	if(ofile_map_from_memory((char *)membuf, length, filename, NULL, NULL,
+	if(ofile_map_from_memory((char *)membuf, length, filename, 0,NULL, NULL,
 				 ofile, FALSE) == FALSE){
 	    free(ofile);
 	    return(NULL);
@@ -263,9 +263,9 @@ struct ofile *ofile)
 		 * bytes will be set to the character '\n'.
 		 */
 		if(ofile->mh != NULL || ofile->mh64 != NULL)
-		    size = round(ofile->object_size, 8);
+		    size = rnd(ofile->object_size, 8);
 		else
-		    size = round(ofile->member_size, 8);
+		    size = rnd(ofile->member_size, 8);
 		/*
 		 * We will force the use of long names so we can make sure the
 		 * size of the name and the size of struct ar_hdr are rounded to
@@ -281,8 +281,8 @@ struct ofile *ofile)
 		       break;
 		}
 		member->member_name_size = ar_name_size;
-		ar_name_size = round(ar_name_size, 8) +
-			       (round(sizeof(struct ar_hdr), 8) -
+		ar_name_size = rnd(ar_name_size, 8) +
+			       (rnd(sizeof(struct ar_hdr), 8) -
 				sizeof(struct ar_hdr));
 		size += ar_name_size;
 		/*
