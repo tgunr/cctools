@@ -1,17 +1,21 @@
 RC_OS = macos
-OFLAG = -O
+OFLAG = -Os
 LIBSTUFF = -L$(SYMROOT)/../libstuff -lstuff
 
-ifneq "mwccppc" "$(notdir $(CC))"
-  GCC_FLAGS = -Wall $(X_CFLAGS)
+ifneq "clang" "$(notdir $(CC))"
+  GCC_FLAGS = $(X_CFLAGS)
 endif
 
-USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "mwccppc" ] && \
+USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "clang" ] && \
 				  [ "$(RC_XBS)" != "YES" ]; then \
 	     echo YES ; else echo NO ; \
 	     fi; )
 
-CFLAGS = $(OFLAG) -g -I../include $(GCC_FLAGS) -DNeXT_MOD -DDEBUG
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+endif
+CFLAGS = $(OFLAG) -g -I../include -Wall $(GCC_FLAGS) -DNeXT_MOD -DDEBUG $(SDK)
 
 ifneq "" "$(wildcard /bin/mkdirs)"
   MKDIRS = /bin/mkdirs
@@ -33,19 +37,16 @@ macos_LIBDIR    = /usr/share
 HFILES = gprof.h m68k.h vax.h
 CFILES = gprof.c arcs.c dfn.c lookup.c calls.c hertz.c printgprof.c \
 	 printlist.c getnfile.c scatter.c
-OBJS = $(CFILES:.c=.o) vers.o
+OBJS = $(CFILES:.c=.o)
 INSTALL_FILES = $(CFILES) $(HFILES) gprof.flat gprof.callg Makefile notes
 
 PRODUCT = gprof
 all: $(OFILE_DIR) $(SYMROOT) $(PRODUCT).NEW
 
 $(PRODUCT).NEW:	$(OFILE_DIR) $(SYMROOT) $(OBJS)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(SYMROOT)/$@.private.o $(OBJS) $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/$@ $(SYMROOT)/$@.private.o
-
-vers.c:
-	vers_string -c $(VERS_STRING_FLAGS) $(PRODUCT) > $(OFILE_DIR)/$@
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/$@ $(SYMROOT)/$@.private.o
 
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
@@ -58,7 +59,7 @@ else
 endif
 
 clean: shlib_clean
-	-rm -f $(SYMROOT)/$(PRODUCT).NEW $(OFILE_DIR)/vers.c
+	-rm -f $(SYMROOT)/$(PRODUCT).NEW
 	-rm -f $(SYMROOT)/$(PRODUCT).NEW.private.o
 
 shlib_clean:

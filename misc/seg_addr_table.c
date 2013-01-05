@@ -30,7 +30,7 @@
 
 #include "stuff/ofile.h"
 #include "stuff/allocate.h"
-#include "stuff/round.h"
+#include "stuff/rnd.h"
 #include "stuff/errors.h"
 #include "stuff/seg_addr_table.h"
 #include "stuff/guess_short_name.h"
@@ -267,6 +267,9 @@ static void get_seg1addr(
     char *arch_name,
     void *cookie);
 
+/* apple_version is created by the libstuff/Makefile */
+extern char apple_version[];
+char *version = apple_version;
 
 /*
  * The seg_addr_table program.  It takes a file which contains the starting
@@ -1245,7 +1248,7 @@ char **envp)
 		    continue;
 		if(entry->split == FALSE){
 		    if(info.layout_info[i]->assigned == FALSE){
-			size = round(info.layout_info[i]->max_sizes.all <<
+			size = rnd(info.layout_info[i]->max_sizes.all <<
 				     info.factor, info.round);
 			if(info.layout_info[i]->use_debug_region == FALSE){
                             info.seg1addr = next_flat_seg1addr(&info, size);
@@ -1278,7 +1281,7 @@ char **envp)
 			max = info.layout_info[i]->max_sizes.read_only;
 		    else
 			max = info.layout_info[i]->max_sizes.read_write;
-		    size = round(max + info.round, info.round);
+		    size = rnd(max + info.round, info.round);
 		    info.segs_read_only_addr += size;
 		    info.segs_read_write_addr += size;
 		    if((info.layout_info[i]->segs_read_only_addr &
@@ -1430,7 +1433,7 @@ char **envp)
 		if(entry->split == FALSE && entry->seg1addr == 0 &&
 					    relayout_nonsplit == FALSE){
 		    if(info.layout_info[i]->assigned == FALSE){
-			size = round(info.layout_info[i]->max_sizes.all <<
+			size = rnd(info.layout_info[i]->max_sizes.all <<
 				     info.factor, info.round);
 			if(info.layout_info[i]->use_debug_region == FALSE){
                             info.seg1addr = next_flat_seg1addr(&info, size);
@@ -1477,7 +1480,7 @@ char **envp)
 			max = info.layout_info[i]->max_sizes.read_only;
 		    else
 			max = info.layout_info[i]->max_sizes.read_write;
-		    size = round(max+info.round, info.round);
+		    size = rnd(max+info.round, info.round);
 		    info.segs_read_only_addr += size;
 		    info.segs_read_write_addr += size;
 		    if((info.layout_info[i]->segs_read_only_addr &

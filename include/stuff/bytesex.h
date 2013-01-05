@@ -304,7 +304,7 @@ __private_extern__ void swap_sparc_thread_state_fpu(
   enum byte_sex target_byte_order);
 
 __private_extern__ void swap_arm_thread_state_t(
-    struct arm_thread_state *cpu,
+    arm_thread_state_t *cpu,
     enum byte_sex target_byte_sex);
 
 __private_extern__ void swap_ident_command(
@@ -335,6 +335,10 @@ __private_extern__ void swap_linkedit_data_command(
     struct linkedit_data_command *ld,
     enum byte_sex target_byte_sex);
 
+__private_extern__ void swap_version_min_command(
+    struct version_min_command *ver_cmd,
+    enum byte_sex target_byte_sex);
+
 __private_extern__ void swap_rpath_command(
     struct rpath_command *rpath_cmd,
     enum byte_sex target_byte_sex);
@@ -345,6 +349,14 @@ __private_extern__ void swap_encryption_command(
 
 __private_extern__ void swap_dyld_info_command(
     struct dyld_info_command *dc, 
+    enum byte_sex target_byte_sex);
+
+__private_extern__ void swap_entry_point_command(
+    struct entry_point_command *ep,
+    enum byte_sex target_byte_sex);
+
+__private_extern__ void swap_source_version_command(
+    struct source_version_command *sv,
     enum byte_sex target_byte_sex);
 
 __private_extern__ void swap_nlist(

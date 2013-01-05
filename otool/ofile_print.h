@@ -1,23 +1,31 @@
 /*
- * Copyright (c) 1999 Apple Computer, Inc. All rights reserved.
+ * Copyright © 2009 Apple Inc. All rights reserved.
  *
  * @APPLE_LICENSE_HEADER_START@
  * 
- * This file contains Original Code and/or Modifications of Original Code
- * as defined in and that are subject to the Apple Public Source License
- * Version 2.0 (the 'License'). You may not use this file except in
- * compliance with the License. Please obtain a copy of the License at
- * http://www.opensource.apple.com/apsl/ and read it before using this
- * file.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  * 
- * The Original Code and all software distributed under the License are
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
- * Please see the License for the specific language governing rights and
- * limitations under the License.
+ * 1.  Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer. 
+ * 2.  Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution. 
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of its
+ * contributors may be used to endorse or promote products derived from this
+ * software without specific prior written permission. 
  * 
+ * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  * @APPLE_LICENSE_HEADER_END@
  */
 #import <ar.h>
@@ -39,7 +47,9 @@ extern void print_ar_hdr(
     struct ar_hdr *ar_hdr,
     char *member_name,
     uint32_t member_name_size,
-    enum bool verbose);
+    uint32_t member_offset,
+    enum bool verbose,
+    enum bool print_offset);
 
 extern void print_library_toc(
     struct ar_hdr *toc_ar_hdr,
@@ -50,7 +60,7 @@ extern void print_library_toc(
     enum byte_sex toc_byte_sex,
     char *library_name,
     char *library_addr,
-    uint32_t library_size,
+    uint64_t library_size,
     char *arch_name,
     enum bool verbose);
 
@@ -278,6 +288,15 @@ extern void print_linkedit_data_command(
     struct linkedit_data_command *ld,
     uint32_t object_size);
 
+extern void print_version_min_command(
+    struct version_min_command *vd);
+
+extern void print_source_version_command(
+    struct source_version_command *sv);
+
+extern void print_entry_point_command(
+    struct entry_point_command *ep);
+
 extern void print_rpath_command(
     struct rpath_command *rpath,
     struct load_command *lc);
@@ -297,9 +316,10 @@ extern void print_thread_states(
     enum byte_sex thread_states_byte_sex);
 
 extern void print_cstring_section(
+    cpu_type_t cputype,
     char *sect,
     uint32_t sect_size,
-    uint32_t sect_addr,
+    uint64_t sect_addr,
     enum bool print_addresses);
 
 extern void print_literal4_section(
@@ -324,6 +344,7 @@ extern void print_literal16_section(
     enum bool print_addresses);
 
 extern void print_literal_pointer_section(
+    cpu_type_t cputype,
     struct load_command *lc,
     uint32_t ncmds,
     uint32_t sizeofcmds,
@@ -332,7 +353,7 @@ extern void print_literal_pointer_section(
     uint32_t size,
     char *sect,
     uint32_t sect_size,
-    uint32_t sect_addr,
+    uint64_t sect_addr,
     struct nlist *symbols,
     struct nlist_64 *symbols64,
     uint32_t nsymbols,
@@ -410,7 +431,8 @@ extern void print_sect(
     uint64_t size,
     uint64_t addr);
 
-extern void print_objc_segment(
+extern enum bool print_objc_segment(
+    cpu_type_t mh_cputype,
     struct load_command *load_commands,
     uint32_t ncmds,
     uint32_t sizeofcmds,

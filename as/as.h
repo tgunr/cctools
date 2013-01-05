@@ -20,6 +20,13 @@ the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.  */
 #ifndef AS_H_
 #define AS_H_
 
+extern char *apple_flags;
+#define APPLE_INC_VERSION "Apple Inc version"
+/* apple_version is in apple_version.c which is created by the Makefile */
+extern char apple_version[];
+/* the GNU version is set in as.c */
+extern char version_string[];
+
 #define _(String) (String)
 #define ARRAY_SIZE(a) (sizeof (a) / sizeof ((a)[0]))
 
@@ -172,7 +179,7 @@ extern cpu_subtype_t archflag_cpusubtype;
 extern char *specific_archflag;
 
 /* TRUE if the .subsections_via_symbols directive was seen */
-int subsections_via_symbols;
+extern int subsections_via_symbols;
 
 /* -I path options for .includes */
 struct directory_stack {

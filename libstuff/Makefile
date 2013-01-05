@@ -1,11 +1,10 @@
 RC_OS = macos
-OFLAG = -O
+OFLAG = -Os
 LTO = -DLTO_SUPPORT
-OPEN = -D__OPEN_SOURCE__
 LEGACY = -D_MACH_I386_THREAD_STATUS_FPSTATE_LEGACY_FIELD_NAMES_ \
 	 -D_ARCHITECTURE_I386_FPU_FPSTATE_LEGACY_FIELD_NAMES_
 
-ifeq "" "$(NEXT_ROOT)"
+ifneq "$(RC_MAJOR_RELEASE_TRAIN)" "Tiger"
 KERN = -fno-builtin -finline -fno-keep-inline-functions -fsigned-bitfields \
        -msoft-float -nostdinc \
        -iwithsysroot /System/Library/Frameworks/Kernel.framework/PrivateHeaders/libsa \
@@ -25,18 +24,27 @@ KERN = -fno-builtin -finline -fno-keep-inline-functions -fsigned-bitfields \
        -DKERNEL -DKERNEL_PRIVATE -DAPPLE -DNeXT -DLIBSA_PRIVATE
 endif
 
-X_CFLAGS = -fno-builtin-round
+X_CFLAGS =
 
 USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "mwccppc" ] && \
 				  [ "$(RC_XBS)" != "YES" ]; then \
 	     echo YES ; else echo NO ; \
 	     fi; )
 	
-ifeq "mwccppc" "$(notdir $(CC))"
-  CFLAGS = $(OFLAG) $(OPEN) $(LTO) -g -gccinc -I$(SRCROOT)/../include $(LEGACY)
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+endif
+
+G = -g
+ifeq "clang" "$(notdir $(CC))"
+  CFLAGS = $(OFLAG) $(LTO) $(G) -I$(SRCROOT)/../include -Wall \
+	   $(LEGACY) $(SDK)
+  PG =
 else
-  CFLAGS = $(OFLAG) $(OPEN) $(LTO) -g -I$(SRCROOT)/../include -Wall \
-	   $(X_CFLAGS) $(LEGACY)
+  CFLAGS = $(OFLAG) $(LTO) $(G) -I$(SRCROOT)/../include -Wall \
+	   $(X_CFLAGS) $(LEGACY) $(SDK)
+  PG = -pg
 endif
 
 ifneq "" "$(wildcard /bin/mkdirs)"
@@ -59,15 +67,15 @@ ifeq "$(EFITOOLS)" "efitools"
 else
 	COFF_BYTESEX =
 endif
-CFILES = allocate.c errors.c arch.c execute.c bytesex.c round.c hppa.c \
+CFILES = allocate.c errors.c arch.c execute.c bytesex.c rnd.c hppa.c \
 	  swap_headers.c reloc.c version_number.c get_toc_byte_sex.c \
 	  best_arch.c fatals.c arch_usage.c ofile.c ofile_error.c print.c \
 	  set_arch_flag_name.c seg_addr_table.c dylib_table.c \
 	  breakout.c writeout.c checkout.c fatal_arch.c ofile_get_word.c \
 	  vm_flush_cache.c hash_string.c dylib_roots.c guess_short_name.c \
 	  SymLoc.c get_arch_from_host.c crc32.c macosx_deployment_target.c \
-	  symbol_list.c unix_standard_mode.c lto.c $(COFF_BYTESEX)
-OBJS = $(CFILES:.c=.o)
+	  symbol_list.c unix_standard_mode.c lto.c llvm.c $(COFF_BYTESEX)
+OBJS = $(CFILES:.c=.o) apple_version.o
 INSTALL_FILES = $(CFILES) Makefile notes
 
 ifeq "$(OLD_LIBKLD)" "YES"
@@ -76,7 +84,8 @@ else
 	STATIC_KLD = 
 endif
 
-all: $(OFILE_DIRS) $(SYMROOT) static dynamic profile $(STATIC_KLD) $(RC_OS)
+#all: $(OFILE_DIRS) $(SYMROOT) static dynamic profile $(STATIC_KLD) $(RC_OS)
+all: $(OFILE_DIRS) $(SYMROOT) dynamic profile $(STATIC_KLD) $(RC_OS)
 
 lib_ofiles: $(OFILE_DIRS) $(SYMROOT) dynamic
 
@@ -156,7 +165,7 @@ dynamic: $(OBJROOT)/dynamic_obj
 		OFILE_DIR=.						\
 		SRCROOT=..						\
 		SYMROOT=..						\
-		COPTS="-dynamic"					\
+		COPTS="$(DYNAMIC)"					\
 		OFLAG="$(OFLAG)"					\
 		CFILES="$(CFILES)"					\
 		RC_CFLAGS="$(RC_CFLAGS)"				\
@@ -169,7 +178,7 @@ dynamic: $(OBJROOT)/dynamic_obj
 		OFILE_DIR=$(OBJROOT)/dynamic_obj			\
 		SRCROOT=$(SRCROOT)					\
 		SYMROOT=$(SYMROOT)					\
-		COPTS="-dynamic"					\
+		COPTS="$(DYNAMIC)"					\
 		OFLAG="$(OFLAG)"					\
 		CFILES="$(CFILES)"					\
 		RC_CFLAGS="$(RC_CFLAGS)"				\
@@ -186,7 +195,7 @@ profile: $(OBJROOT)/profile_obj
 		OFILE_DIR=.						\
 		SRCROOT=..						\
 		SYMROOT=..						\
-		COPTS="-dynamic -pg"					\
+		COPTS="$(DYNAMIC) $(PG)"				\
 		OFLAG="$(OFLAG)"					\
 		RC_CFLAGS="$(RC_CFLAGS)"				\
 		RC_ARCHS="$(RC_ARCHS)";					\
@@ -198,7 +207,7 @@ profile: $(OBJROOT)/profile_obj
 		OFILE_DIR=$(OBJROOT)/profile_obj			\
 		SRCROOT=$(SRCROOT)					\
 		SYMROOT=$(SYMROOT)					\
-		COPTS="-dynamic -pg"					\
+		COPTS="$(DYNAMIC) $(PG)"				\
 		OFLAG="$(OFLAG)"					\
 		RC_CFLAGS="$(RC_CFLAGS)"				\
 		RC_ARCHS="$(RC_ARCHS)";					\
@@ -235,6 +244,10 @@ shlib: $(OBJROOT)/shlib_obj
 $(PRODUCT):	$(OFILE_DIR) $(SYMROOT) $(OBJS)
 	libtool -static -o $(SYMROOT)/$(PRODUCT) $(OBJS)
 
+apple_version.c:
+	echo "const char apple_version[]=" > $(OFILE_DIR)/$@
+	echo "\"cctools-$(RC_ProjectSourceVersion)\";" >> $(OFILE_DIR)/$@
+
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
 	$(CC) $(CFLAGS) $(RC_CFLAGS) $(COPTS) -c -o $(OFILE_DIR)/$*.o $<
@@ -242,6 +255,7 @@ ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 lto.o: lto.c
 	$(CC) -std=c99 $(CFLAGS) $(RC_CFLAGS) $(COPTS) -c \
 		-I/Developer/usr/local/include \
+		-I$(DT_TOOLCHAIN_DIR)/usr/local/include \
 		-o $(OFILE_DIR)/$*.o $<
 else
 .c.o:
@@ -253,6 +267,7 @@ else
 lto.o: lto.c
 	$(CC) -std=c99 $(CFLAGS) $(RC_CFLAGS) $(COPTS) -c \
 		-I/Developer/usr/local/include \
+		-I$(DT_TOOLCHAIN_DIR)/usr/local/include \
 		-MD -dependency-file $(OFILE_DIR)/$*.d \
 		-o $(OFILE_DIR)/$*.o $<
 	md -d -u $(OFILE_DIR)/Makedep $(OFILE_DIR)/$*.d
@@ -273,7 +288,7 @@ installsrc:
 installGASsrc:
 	$(MKDIRS) $(SRCROOT)
 	chmod 755 $(SRCROOT)
-	gnutar cf - Makefile bytesex.c round.c | (cd $(SRCROOT); gnutar xf -)
+	gnutar cf - Makefile bytesex.c rnd.c | (cd $(SRCROOT); gnutar xf -)
 	chmod 444 $(SRCROOT)/*
 
 fromGASsrc: $(OBJROOT)/dynamic_obj
@@ -284,9 +299,9 @@ fromGASsrc: $(OBJROOT)/dynamic_obj
 	    OFILE_DIR=.							\
 	    SRCROOT=..							\
 	    SYMROOT=..							\
-	    COPTS="-dynamic"						\
+	    COPTS="$(DYNAMIC)"						\
 	    OFLAG="$(OFLAG)"						\
-	    CFILES="bytesex.c round.c"					\
+	    CFILES="bytesex.c rnd.c"					\
 	    RC_CFLAGS="$(RC_CFLAGS)"					\
 	    RC_ARCHS="$(RC_ARCHS)";
 

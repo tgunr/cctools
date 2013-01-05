@@ -1,14 +1,18 @@
 export USE_APPLE_PB_SUPPORT = all
-OFLAG = -O
+OFLAG = -Os
 RC_OS = macos
-X_CFLAGS = -fno-builtin-round
+X_CFLAGS =
+ifneq "" "$(SDKROOT)"
+  SDK = -isysroot $(SDKROOT)
+  CC = $(shell xcrun -find -sdk $(SDKROOT) cc)
+endif
 
-ifeq "mwccppc" "$(notdir $(CC))"
-  CFLAGS = $(OFLAG) -g \
-	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR)
+ifeq "clang" "$(notdir $(CC))"
+  CFLAGS = $(OFLAG) -g -Wall \
+	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR) $(SDK)
 else
   CFLAGS = $(OFLAG) -g -Wall $(X_CFLAGS) \
-	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR)
+	 -I$(SRCROOT) -I$(SRCROOT)/../include -I$(OFILE_DIR) $(SDK)
 endif
 
 USE_DEPENDENCY_FILE := $(shell if [ "$(notdir $(CC))" != "mwccppc" ] && \
@@ -40,11 +44,6 @@ PROGS = makerelocs.NEW mtoc.NEW
 
 all:	$(OFILE_DIR) $(SYMROOT) $(PROGS)
 
-vers.c:
-	vers_string -c $(VERS_STRING_FLAGS) cctools_efi > $(OFILE_DIR)/$@
-	echo "const char apple_version[]= " \"`vers_string $(VERS_STRING_FLAGS) -f cctools`\" ";" >> \
-	$(OFILE_DIR)/$@
-
 ifeq "NO" "$(USE_DEPENDENCY_FILE)"
 .c.o:
 	$(CC) $(CFLAGS) $(RC_CFLAGS) -c -o $(OFILE_DIR)/$*.o $<
@@ -55,18 +54,18 @@ else
 	md -d -u $(OFILE_DIR)/Makedep $(OFILE_DIR)/$*.d
 endif
 
-makerelocs.NEW: makerelocs.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+makerelocs.NEW: makerelocs.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/makerelocs.private.o \
-		$(OFILE_DIR)/makerelocs.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/makerelocs.NEW \
+		$(OFILE_DIR)/makerelocs.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/makerelocs.NEW \
 		$(OFILE_DIR)/makerelocs.private.o
 
-mtoc.NEW: mtoc.o vers.o
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -nostdlib -r \
+mtoc.NEW: mtoc.o
+	$(CC) $(RC_CFLAGS) -nostdlib -r \
 		-o $(OBJROOT)/mtoc.private.o \
-		$(OFILE_DIR)/mtoc.o $(OFILE_DIR)/vers.o $(LIBSTUFF)
-	$(CC) $(CFLAGS) $(RC_CFLAGS) -o $(SYMROOT)/mtoc.NEW \
+		$(OFILE_DIR)/mtoc.o $(LIBSTUFF)
+	$(CC) $(RC_CFLAGS) $(SDK) -o $(SYMROOT)/mtoc.NEW \
 		$(OFILE_DIR)/mtoc.private.o
 
 clean: shlib_clean
@@ -76,8 +75,6 @@ clean: shlib_clean
 
 shlib_clean:
 	-rm -f \
-	$(OFILE_DIR)/vers.c \
-	$(OFILE_DIR)/vers.o \
 	$(OFILE_DIR)/makerelocs.o \
 	$(OFILE_DIR)/makerelocs.private.o \
 	$(OFILE_DIR)/mtoc.o \
