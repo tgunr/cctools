@@ -30,7 +30,7 @@
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
 #undef VALID_THREAD_STATE_FLAVOR
-#include <mach/ppc/thread_status.h>
+//#include <mach/ppc/thread_status.h>
 #undef MACHINE_THREAD_STATE	/* need to undef these to avoid warnings */
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
@@ -40,7 +40,7 @@
 #include <mach/i386/thread_status.h>
 #include <mach/hppa/thread_status.h>
 #include <mach/sparc/thread_status.h>
-#include <mach/arm/thread_status.h>
+//#include <mach/arm/thread_status.h>
 #include "stuff/bool.h"
 #include "stuff/bytesex.h"
 #include "stuff/errors.h"
@@ -440,6 +440,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#ifdef PPC_DISABLED
 	    	if(cputype == CPU_TYPE_POWERPC ||
 	    	   cputype == CPU_TYPE_VEO ||
 		   cputype == CPU_TYPE_POWERPC64){
@@ -525,6 +526,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#endif
 	    	if(cputype == CPU_TYPE_MC88000){
 		    m88k_thread_state_grf_t *cpu;
 		    m88k_thread_state_xrf_t *fpu;
@@ -920,6 +922,7 @@ check_dylinker_command:
 		  }
 		  break;
 		}
+#ifdef ARM_DISABLED
 	    	if(cputype == CPU_TYPE_ARM){
 		    arm_thread_state_t *cpu;
 
@@ -957,6 +960,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#endif
 		error("in swap_object_headers(): malformed load commands "
 		    "(unknown cputype (%d) and cpusubtype (%d) of object and "
                     "can't byte swap %s command %lu)", cputype, 
@@ -1306,6 +1310,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#ifdef PPC_DISABLED
 	    	if(cputype == CPU_TYPE_POWERPC ||
 	    	   cputype == CPU_TYPE_VEO ||
 		   cputype == CPU_TYPE_POWERPC64){
@@ -1345,6 +1350,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#endif
 	    	if(cputype == CPU_TYPE_MC88000){
 		    m88k_thread_state_grf_t *cpu;
 		    m88k_thread_state_xrf_t *fpu;
@@ -1555,6 +1561,7 @@ check_dylinker_command:
 		  }
 		  break;
 		}
+#ifdef ARM_DISABLED
 	    	if(cputype == CPU_TYPE_ARM){
 		    arm_thread_state_t *cpu;
 
@@ -1575,6 +1582,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#endif
 		break;
 
 	    case LC_MAIN:

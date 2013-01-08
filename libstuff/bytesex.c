@@ -190,7 +190,7 @@
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
 #undef VALID_THREAD_STATE_FLAVOR
-#include <mach/ppc/thread_status.h>
+//#include <mach/ppc/thread_status.h>
 #undef MACHINE_THREAD_STATE	/* need to undef these to avoid warnings */
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
@@ -200,7 +200,7 @@
 #include <mach/i386/thread_status.h>
 #include <mach/hppa/thread_status.h>
 #include <mach/sparc/thread_status.h>
-#include <mach/arm/thread_status.h>
+//#include <mach/arm/thread_status.h>
 #include <mach-o/nlist.h>
 #include <mach-o/reloc.h>
 #include <mach-o/ranlib.h>
@@ -757,140 +757,140 @@ enum byte_sex target_byte_sex)
 	user_reg->user_reg = SWAP_INT(user_reg->user_reg);
 }
 
-__private_extern__
-void
-swap_ppc_thread_state_t(
-ppc_thread_state_t *cpu,
-enum byte_sex target_byte_sex)
-{
-	cpu->srr0 = SWAP_INT(cpu->srr0);
-	cpu->srr1 = SWAP_INT(cpu->srr1);
-	cpu->r0 = SWAP_INT(cpu->r0);
-	cpu->r1 = SWAP_INT(cpu->r1);
-	cpu->r2 = SWAP_INT(cpu->r2);
-	cpu->r3 = SWAP_INT(cpu->r3);
-	cpu->r4 = SWAP_INT(cpu->r4);
-	cpu->r5 = SWAP_INT(cpu->r5);
-	cpu->r6 = SWAP_INT(cpu->r6);
-	cpu->r7 = SWAP_INT(cpu->r7);
-	cpu->r8 = SWAP_INT(cpu->r8);
-	cpu->r9 = SWAP_INT(cpu->r9);
-	cpu->r10 = SWAP_INT(cpu->r10);
-	cpu->r11 = SWAP_INT(cpu->r11);
-	cpu->r12 = SWAP_INT(cpu->r12);
-	cpu->r13 = SWAP_INT(cpu->r13);
-	cpu->r14 = SWAP_INT(cpu->r14);
-	cpu->r15 = SWAP_INT(cpu->r15);
-	cpu->r16 = SWAP_INT(cpu->r16);
-	cpu->r17 = SWAP_INT(cpu->r17);
-	cpu->r18 = SWAP_INT(cpu->r18);
-	cpu->r19 = SWAP_INT(cpu->r19);
-	cpu->r20 = SWAP_INT(cpu->r20);
-	cpu->r21 = SWAP_INT(cpu->r21);
-	cpu->r22 = SWAP_INT(cpu->r22);
-	cpu->r23 = SWAP_INT(cpu->r23);
-	cpu->r24 = SWAP_INT(cpu->r24);
-	cpu->r25 = SWAP_INT(cpu->r25);
-	cpu->r26 = SWAP_INT(cpu->r26);
-	cpu->r27 = SWAP_INT(cpu->r27);
-	cpu->r28 = SWAP_INT(cpu->r28);
-	cpu->r29 = SWAP_INT(cpu->r29);
-	cpu->r30 = SWAP_INT(cpu->r30);
-	cpu->r31 = SWAP_INT(cpu->r31);
-	cpu->cr  = SWAP_INT(cpu->cr);
-	cpu->xer = SWAP_INT(cpu->xer);
-	cpu->lr  = SWAP_INT(cpu->lr);
-	cpu->ctr = SWAP_INT(cpu->ctr);
-	cpu->mq =  SWAP_INT(cpu->mq);
-	cpu->vrsave = SWAP_INT(cpu->vrsave);
-}
-
-__private_extern__
-void
-swap_ppc_thread_state64_t(
-ppc_thread_state64_t *cpu,
-enum byte_sex target_byte_sex)
-{
-	cpu->srr0 = SWAP_LONG_LONG(cpu->srr0);
-	cpu->srr1 = SWAP_LONG_LONG(cpu->srr1);
-	cpu->r0 = SWAP_LONG_LONG(cpu->r0);
-	cpu->r1 = SWAP_LONG_LONG(cpu->r1);
-	cpu->r2 = SWAP_LONG_LONG(cpu->r2);
-	cpu->r3 = SWAP_LONG_LONG(cpu->r3);
-	cpu->r4 = SWAP_LONG_LONG(cpu->r4);
-	cpu->r5 = SWAP_LONG_LONG(cpu->r5);
-	cpu->r6 = SWAP_LONG_LONG(cpu->r6);
-	cpu->r7 = SWAP_LONG_LONG(cpu->r7);
-	cpu->r8 = SWAP_LONG_LONG(cpu->r8);
-	cpu->r9 = SWAP_LONG_LONG(cpu->r9);
-	cpu->r10 = SWAP_LONG_LONG(cpu->r10);
-	cpu->r11 = SWAP_LONG_LONG(cpu->r11);
-	cpu->r12 = SWAP_LONG_LONG(cpu->r12);
-	cpu->r13 = SWAP_LONG_LONG(cpu->r13);
-	cpu->r14 = SWAP_LONG_LONG(cpu->r14);
-	cpu->r15 = SWAP_LONG_LONG(cpu->r15);
-	cpu->r16 = SWAP_LONG_LONG(cpu->r16);
-	cpu->r17 = SWAP_LONG_LONG(cpu->r17);
-	cpu->r18 = SWAP_LONG_LONG(cpu->r18);
-	cpu->r19 = SWAP_LONG_LONG(cpu->r19);
-	cpu->r20 = SWAP_LONG_LONG(cpu->r20);
-	cpu->r21 = SWAP_LONG_LONG(cpu->r21);
-	cpu->r22 = SWAP_LONG_LONG(cpu->r22);
-	cpu->r23 = SWAP_LONG_LONG(cpu->r23);
-	cpu->r24 = SWAP_LONG_LONG(cpu->r24);
-	cpu->r25 = SWAP_LONG_LONG(cpu->r25);
-	cpu->r26 = SWAP_LONG_LONG(cpu->r26);
-	cpu->r27 = SWAP_LONG_LONG(cpu->r27);
-	cpu->r28 = SWAP_LONG_LONG(cpu->r28);
-	cpu->r29 = SWAP_LONG_LONG(cpu->r29);
-	cpu->r30 = SWAP_LONG_LONG(cpu->r30);
-	cpu->r31 = SWAP_LONG_LONG(cpu->r31);
-	cpu->cr  = SWAP_INT(cpu->cr);
-	cpu->xer = SWAP_LONG_LONG(cpu->xer);
-	cpu->lr  = SWAP_LONG_LONG(cpu->lr);
-	cpu->ctr = SWAP_LONG_LONG(cpu->ctr);
-	cpu->vrsave =  SWAP_INT(cpu->vrsave);
-}
-
-__private_extern__
-void
-swap_ppc_float_state_t(
-ppc_float_state_t *fpu,
-enum byte_sex target_byte_sex)
-{
-    uint32_t i;
-#ifdef __MWERKS__
-    enum byte_sex dummy;
-        dummy = target_byte_sex;
-#endif
-	
-	for(i = 0; i < 32; i++)
-	    fpu->fpregs[i] = SWAP_DOUBLE(fpu->fpregs[i]);
-
-	fpu->fpscr_pad = SWAP_INT(fpu->fpscr_pad);
-	fpu->fpscr = SWAP_INT(fpu->fpscr);
-}
-
-__private_extern__
-void
-swap_ppc_exception_state_t(
-ppc_exception_state_t *state,
-enum byte_sex target_byte_sex)
-{
-    uint32_t i;
-#ifdef __MWERKS__
-    enum byte_sex dummy;
-        dummy = target_byte_sex;
-#endif
-	
-	state->dar = SWAP_INT(state->dar);
-	state->dsisr = SWAP_INT(state->dsisr);
-	state->exception = SWAP_INT(state->exception);
-	state->pad0 = SWAP_INT(state->pad0);
-
-	for(i = 0; i < 4; i++)
-	    state->pad1[i] = SWAP_INT(state->pad1[i]);
-}
+//__private_extern__
+//void
+//swap_ppc_thread_state_t(
+//ppc_thread_state_t *cpu,
+//enum byte_sex target_byte_sex)
+//{
+//	cpu->srr0 = SWAP_INT(cpu->srr0);
+//	cpu->srr1 = SWAP_INT(cpu->srr1);
+//	cpu->r0 = SWAP_INT(cpu->r0);
+//	cpu->r1 = SWAP_INT(cpu->r1);
+//	cpu->r2 = SWAP_INT(cpu->r2);
+//	cpu->r3 = SWAP_INT(cpu->r3);
+//	cpu->r4 = SWAP_INT(cpu->r4);
+//	cpu->r5 = SWAP_INT(cpu->r5);
+//	cpu->r6 = SWAP_INT(cpu->r6);
+//	cpu->r7 = SWAP_INT(cpu->r7);
+//	cpu->r8 = SWAP_INT(cpu->r8);
+//	cpu->r9 = SWAP_INT(cpu->r9);
+//	cpu->r10 = SWAP_INT(cpu->r10);
+//	cpu->r11 = SWAP_INT(cpu->r11);
+//	cpu->r12 = SWAP_INT(cpu->r12);
+//	cpu->r13 = SWAP_INT(cpu->r13);
+//	cpu->r14 = SWAP_INT(cpu->r14);
+//	cpu->r15 = SWAP_INT(cpu->r15);
+//	cpu->r16 = SWAP_INT(cpu->r16);
+//	cpu->r17 = SWAP_INT(cpu->r17);
+//	cpu->r18 = SWAP_INT(cpu->r18);
+//	cpu->r19 = SWAP_INT(cpu->r19);
+//	cpu->r20 = SWAP_INT(cpu->r20);
+//	cpu->r21 = SWAP_INT(cpu->r21);
+//	cpu->r22 = SWAP_INT(cpu->r22);
+//	cpu->r23 = SWAP_INT(cpu->r23);
+//	cpu->r24 = SWAP_INT(cpu->r24);
+//	cpu->r25 = SWAP_INT(cpu->r25);
+//	cpu->r26 = SWAP_INT(cpu->r26);
+//	cpu->r27 = SWAP_INT(cpu->r27);
+//	cpu->r28 = SWAP_INT(cpu->r28);
+//	cpu->r29 = SWAP_INT(cpu->r29);
+//	cpu->r30 = SWAP_INT(cpu->r30);
+//	cpu->r31 = SWAP_INT(cpu->r31);
+//	cpu->cr  = SWAP_INT(cpu->cr);
+//	cpu->xer = SWAP_INT(cpu->xer);
+//	cpu->lr  = SWAP_INT(cpu->lr);
+//	cpu->ctr = SWAP_INT(cpu->ctr);
+//	cpu->mq =  SWAP_INT(cpu->mq);
+//	cpu->vrsave = SWAP_INT(cpu->vrsave);
+//}
+//
+//__private_extern__
+//void
+//swap_ppc_thread_state64_t(
+//ppc_thread_state64_t *cpu,
+//enum byte_sex target_byte_sex)
+//{
+//	cpu->srr0 = SWAP_LONG_LONG(cpu->srr0);
+//	cpu->srr1 = SWAP_LONG_LONG(cpu->srr1);
+//	cpu->r0 = SWAP_LONG_LONG(cpu->r0);
+//	cpu->r1 = SWAP_LONG_LONG(cpu->r1);
+//	cpu->r2 = SWAP_LONG_LONG(cpu->r2);
+//	cpu->r3 = SWAP_LONG_LONG(cpu->r3);
+//	cpu->r4 = SWAP_LONG_LONG(cpu->r4);
+//	cpu->r5 = SWAP_LONG_LONG(cpu->r5);
+//	cpu->r6 = SWAP_LONG_LONG(cpu->r6);
+//	cpu->r7 = SWAP_LONG_LONG(cpu->r7);
+//	cpu->r8 = SWAP_LONG_LONG(cpu->r8);
+//	cpu->r9 = SWAP_LONG_LONG(cpu->r9);
+//	cpu->r10 = SWAP_LONG_LONG(cpu->r10);
+//	cpu->r11 = SWAP_LONG_LONG(cpu->r11);
+//	cpu->r12 = SWAP_LONG_LONG(cpu->r12);
+//	cpu->r13 = SWAP_LONG_LONG(cpu->r13);
+//	cpu->r14 = SWAP_LONG_LONG(cpu->r14);
+//	cpu->r15 = SWAP_LONG_LONG(cpu->r15);
+//	cpu->r16 = SWAP_LONG_LONG(cpu->r16);
+//	cpu->r17 = SWAP_LONG_LONG(cpu->r17);
+//	cpu->r18 = SWAP_LONG_LONG(cpu->r18);
+//	cpu->r19 = SWAP_LONG_LONG(cpu->r19);
+//	cpu->r20 = SWAP_LONG_LONG(cpu->r20);
+//	cpu->r21 = SWAP_LONG_LONG(cpu->r21);
+//	cpu->r22 = SWAP_LONG_LONG(cpu->r22);
+//	cpu->r23 = SWAP_LONG_LONG(cpu->r23);
+//	cpu->r24 = SWAP_LONG_LONG(cpu->r24);
+//	cpu->r25 = SWAP_LONG_LONG(cpu->r25);
+//	cpu->r26 = SWAP_LONG_LONG(cpu->r26);
+//	cpu->r27 = SWAP_LONG_LONG(cpu->r27);
+//	cpu->r28 = SWAP_LONG_LONG(cpu->r28);
+//	cpu->r29 = SWAP_LONG_LONG(cpu->r29);
+//	cpu->r30 = SWAP_LONG_LONG(cpu->r30);
+//	cpu->r31 = SWAP_LONG_LONG(cpu->r31);
+//	cpu->cr  = SWAP_INT(cpu->cr);
+//	cpu->xer = SWAP_LONG_LONG(cpu->xer);
+//	cpu->lr  = SWAP_LONG_LONG(cpu->lr);
+//	cpu->ctr = SWAP_LONG_LONG(cpu->ctr);
+//	cpu->vrsave =  SWAP_INT(cpu->vrsave);
+//}
+//
+//__private_extern__
+//void
+//swap_ppc_float_state_t(
+//ppc_float_state_t *fpu,
+//enum byte_sex target_byte_sex)
+//{
+//    uint32_t i;
+//#ifdef __MWERKS__
+//    enum byte_sex dummy;
+//        dummy = target_byte_sex;
+//#endif
+//	
+//	for(i = 0; i < 32; i++)
+//	    fpu->fpregs[i] = SWAP_DOUBLE(fpu->fpregs[i]);
+//
+//	fpu->fpscr_pad = SWAP_INT(fpu->fpscr_pad);
+//	fpu->fpscr = SWAP_INT(fpu->fpscr);
+//}
+//
+//__private_extern__
+//void
+//swap_ppc_exception_state_t(
+//ppc_exception_state_t *state,
+//enum byte_sex target_byte_sex)
+//{
+//    uint32_t i;
+//#ifdef __MWERKS__
+//    enum byte_sex dummy;
+//        dummy = target_byte_sex;
+//#endif
+//	
+//	state->dar = SWAP_INT(state->dar);
+//	state->dsisr = SWAP_INT(state->dsisr);
+//	state->exception = SWAP_INT(state->exception);
+//	state->pad0 = SWAP_INT(state->pad0);
+//
+//	for(i = 0; i < 4; i++)
+//	    state->pad1[i] = SWAP_INT(state->pad1[i]);
+//}
 
 __private_extern__
 void
@@ -2329,21 +2329,21 @@ enum byte_sex target_byte_sex)
 	}
 }
 
-__private_extern__
-void
-swap_arm_thread_state_t(
-arm_thread_state_t *cpu,
-enum byte_sex target_byte_sex)
-{
-    int i;
-
-	for(i = 0; i < 13; i++)
-	    cpu->__r[i] = SWAP_INT(cpu->__r[i]);
-	cpu->__sp = SWAP_INT(cpu->__sp);
-	cpu->__lr = SWAP_INT(cpu->__lr);
-	cpu->__pc = SWAP_INT(cpu->__pc);
-	cpu->__cpsr = SWAP_INT(cpu->__cpsr);
-}
+//__private_extern__
+//void
+//swap_arm_thread_state_t(
+//arm_thread_state_t *cpu,
+//enum byte_sex target_byte_sex)
+//{
+//    int i;
+//
+//	for(i = 0; i < 13; i++)
+//	    cpu->__r[i] = SWAP_INT(cpu->__r[i]);
+//	cpu->__sp = SWAP_INT(cpu->__sp);
+//	cpu->__lr = SWAP_INT(cpu->__lr);
+//	cpu->__pc = SWAP_INT(cpu->__pc);
+//	cpu->__cpsr = SWAP_INT(cpu->__cpsr);
+//}
 
 __private_extern__
 void

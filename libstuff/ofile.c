@@ -51,7 +51,7 @@
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #import <mach/m68k/thread_status.h>
-#import <mach/ppc/thread_status.h>
+//#import <mach/ppc/thread_status.h>
 #undef MACHINE_THREAD_STATE     /* need to undef these to avoid warnings */
 #undef MACHINE_THREAD_STATE_COUNT
 #undef THREAD_STATE_NONE
@@ -60,7 +60,7 @@
 #import <mach/i860/thread_status.h>
 #import <mach/i386/thread_status.h>
 #import <mach/sparc/thread_status.h>
-#import <mach/arm/thread_status.h>
+//#import <mach/arm/thread_status.h>
 #include <mach-o/nlist.h>
 #include <mach-o/reloc.h>
 #include "stuff/bool.h"
@@ -4736,6 +4736,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#ifdef PPC_DISABLED
 	    	if(cputype == CPU_TYPE_POWERPC ||
 	    	   cputype == CPU_TYPE_VEO){
 		    ppc_thread_state_t *nrw_cpu;
@@ -4889,8 +4890,11 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+
 #endif /* PPC_THREAD_STATE64_COUNT */
-	    	if(cputype == CPU_TYPE_MC88000){
+#endif /* PPC_DISABLED */
+                
+                if(cputype == CPU_TYPE_MC88000){
 		    m88k_thread_state_grf_t *cpu;
 		    m88k_thread_state_xrf_t *fpu;
 		    m88k_thread_state_user_t *user;
@@ -5656,6 +5660,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#ifdef ARM_DISABLED
 	    	if(cputype == CPU_TYPE_ARM){
 		    arm_thread_state_t *cpu;
 
@@ -5731,6 +5736,7 @@ check_dylinker_command:
 		    }
 		    break;
 		}
+#endif
 		if(swapped){
 		    Mach_O_error(ofile, "malformed object (unknown cputype and "
 			"cpusubtype of object and can't byte swap and check %s "

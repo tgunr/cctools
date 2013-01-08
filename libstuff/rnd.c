@@ -26,7 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <stdint.h>
-#include "stuff/rnd.h"
+#include <stuff/rnd.h>
+
 /*
  * rnd() rounds v to a multiple of r.
  */
